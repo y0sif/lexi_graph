@@ -83,6 +83,7 @@ def main():
     }
     .success-message {
         background: #d4edda;
+        color: black;
         padding: 1rem;
         border-radius: 8px;
         border-left: 4px solid #28a745;
@@ -203,7 +204,7 @@ def main():
             st.image(
                 st.session_state.graph_path,
                 caption="Generated Knowledge Graph",
-                use_column_width=True
+                use_container_width=True
             )
             
             # Download section
@@ -220,10 +221,6 @@ def main():
                             type="primary",
                             use_container_width=True
                         )
-            
-            # Optional: Show summary in expandable section
-            with st.expander("📋 View Generated Summary (Optional)"):
-                st.text(st.session_state.current_summary)
             
             # Success message
             st.markdown(

@@ -15,11 +15,11 @@ load_dotenv()
 def create_llm():
     """Create and configure the LLM instance for OpenRouter"""
     return ChatOpenAI(
-        model="moonshotai/kimi-k2:free",  # OpenRouter model name format
+        model="google/gemma-3n-e4b-it:free",  # OpenRouter model name format
         temperature=0.1,
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPENROUTER_API_KEY"),
-        max_tokens=4096,
+        max_tokens=8000,
     )
 
 def create_prompts():
@@ -104,32 +104,48 @@ IMPORTANT SYNTAX RULES:
 Graph orientation
 Set the graph direction to left-to-right using rankdir=LR.
 
-Nodes
-Each item from the hierarchy should be represented as a separate node. Use shape=box and style=filled, color=lightgray for clarity.
+Nodes and Color Grouping
+Each item from the hierarchy should be represented as a separate node. Use shape=box and style=filled for clarity.
+
+Color scheme for parent-child relationships:
+- Nodes that share the same parent should have the same color
+- Use these colors in order: lightblue, lightgreen, lightcoral, lightyellow, lightpink, lightcyan, wheat, lavender, mistyrose, honeydew
+- Root node(s) should use lightgray
+- Apply colors systematically: all children of the first parent get lightblue, all children of the second parent get lightgreen, etc.
 
 Node naming convention:
 - Use simple identifiers like: AI, ML, SupervisedLearning, etc.
 - Put the actual text in the label attribute
-- Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data"];
+- Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", color=lightblue];
 
 Edges
 Connect nodes based on their parent-child relationships using simple node identifiers.
 
-Example of correct syntax:
+Example of correct syntax with color grouping:
 digraph TopicSummary {{
     rankdir=LR;
-    node [shape=box, style=filled, color=lightgray];
+    node [shape=box, style=filled];
 
-    AI [label="Artificial Intelligence"];
-    ML [label="Machine Learning"];
-    SupervisedLearning [label="Supervised Learning\\nTrains on labeled data"];
+    // Root node
+    AI [label="Artificial Intelligence", color=lightgray];
     
+    // Children of AI (same color group)
+    ML [label="Machine Learning", color=lightblue];
+    NLP [label="Natural Language Processing", color=lightblue];
+    
+    // Children of ML (same color group)
+    SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", color=lightgreen];
+    UnsupervisedLearning [label="Unsupervised Learning\\nFinds patterns in data", color=lightgreen];
+    
+    // Edges
     AI -> ML;
+    AI -> NLP;
     ML -> SupervisedLearning;
+    ML -> UnsupervisedLearning;
 }} 
 
 Goal:
-Produce a clean, valid DOT file with proper syntax that accurately reflects the logical structure of the input summary.
+Produce a clean, valid DOT file with proper syntax that accurately reflects the logical structure of the input summary, with nodes visually grouped by color based on their parent relationships.
 
 Hierarchical summary: {summary}
 
@@ -178,62 +194,12 @@ def pipeline(input_text: str, progress_callback=None):
         return error_msg, None
 
 # Example lecture content for the web app
-EXAMPLE_LECTURE = """Today we're going to talk about something fundamental in physics and chemistry: The States of Matter. At its core, matter is anything that has mass and occupies space. All matter exists in different forms known as states or phases.
+EXAMPLE_LECTURE = """Welcome to this short lecture on Artificial Intelligence. Let’s start with the basics. Artificial Intelligence, or AI, refers to the capability of machines to perform tasks that typically require human intelligence—things like understanding language, recognizing images, or making decisions. Within AI, one of the most important and widely used branches is Machine Learning, or ML. Machine Learning is all about teaching computers to learn from data. Instead of programming every rule manually, we feed the machine examples, and it learns patterns or rules from that data on its own.
 
-1. Classical States of Matter
-There are three primary states we encounter in everyday life:
+Machine learning comes in several types. The first is supervised learning, where we train the model using labeled data—that means we give it both the input and the correct output. For example, if we want to train a model to detect spam emails, we show it lots of examples of emails labeled as “spam” or “not spam,” and the model learns to predict that label. The second type is unsupervised learning, where the data has no labels at all. The algorithm’s job is to find hidden patterns or groupings. A good example here would be clustering customers based on their shopping behavior—without knowing their categories beforehand. Then we have semi-supervised learning, which is a mix of both: it uses a small amount of labeled data and a larger amount of unlabeled data to improve learning accuracy.
 
-🧊 Solid
-Shape & Volume: Fixed shape and volume.
+Another major category is reinforcement learning. Here, the model—or we call it an agent—learns by interacting with an environment and receiving feedback in the form of rewards or penalties. A classic example is training a robot to walk or teaching an AI to play games like chess or Go. It tries actions, sees the result, and adjusts its behavior over time to maximize rewards.
 
-Particle Behavior: Particles are tightly packed in a regular pattern and vibrate in place.
+Now, within machine learning, there's a very powerful subfield called deep learning. Deep learning uses neural networks with many layers, and it has completely transformed what we can do with AI. These deep neural networks are excellent at automatically learning complex features from data, especially in areas like image recognition, speech processing, and natural language understanding. Deep learning is what powers technologies like self-driving cars, facial recognition, and even language models like ChatGPT.
 
-Example: Ice, metal, wood.
-
-💧 Liquid
-Shape & Volume: Fixed volume but takes the shape of its container.
-
-Particle Behavior: Particles are close together but can move/slide past each other.
-
-Example: Water, oil, alcohol.
-
-🌬️ Gas
-Shape & Volume: No fixed shape or volume; expands to fill the container.
-
-Particle Behavior: Particles are far apart and move freely at high speeds.
-
-Example: Air, oxygen, carbon dioxide.
-
-2. Other (Less Common) States
-Beyond the classical states, scientists recognize other exotic states, especially in advanced physics:
-
-⚡ Plasma
-Found in stars, lightning, and neon signs.
-
-Composed of ionized gas — atoms are split into electrons and ions.
-
-Behaves differently due to electrical conductivity and response to magnetic fields.
-
-🧪 Bose–Einstein Condensate (BEC)
-Discovered in 1995.
-
-Occurs at temperatures near absolute zero.
-
-Particles lose individual identity and behave as one "super-particle."
-
-Shows quantum effects on a macroscopic scale.
-
-3. Transitions Between States
-Matter can change from one state to another through phase changes, depending on temperature and pressure:
-
-Melting (solid → liquid)
-
-Freezing (liquid → solid)
-
-Evaporation/Boiling (liquid → gas)
-
-Condensation (gas → liquid)
-
-Sublimation (solid → gas)
-
-Deposition (gas → solid)."""
+To summarize: AI is the broad field. Machine learning is a subset that lets computers learn from data. And deep learning is a further subset that uses multi-layered neural networks to learn high-level patterns. Each type of learning—supervised, unsupervised, semi-supervised, and reinforcement—has its strengths depending on the problem you’re trying to solve. And understanding which one to use is a big part of becoming proficient in AI."""
