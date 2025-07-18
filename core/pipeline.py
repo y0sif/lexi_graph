@@ -1,6 +1,6 @@
 """
 Core pipeline functions for LexiGraph
-Handles multi-agent LLM processing and knowledge graph generation
+Handles multi-agent LLM processing and knowledge graph generation via OpenRouter
 Uses specialized agents for different tasks:
 - Summarization Agent: Optimized for content analysis
 - Visualization Agent: Optimized for graph generation
@@ -8,7 +8,7 @@ Uses specialized agents for different tasks:
 
 import os
 from dotenv import load_dotenv
-from langchain_cohere import ChatCohere
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from .utils import clean_dot_code
 
@@ -16,20 +16,32 @@ load_dotenv()
 
 def create_summarization_agent():
     """Create and configure the LLM instance specialized for summarization"""
-    return ChatCohere(
-        model=os.getenv("COHERE_MODEL", "command-r-plus"),
+    return ChatOpenAI(
+        model="google/gemma-3n-e4b-it:free",
         temperature=0.1,  
-        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1",
         max_tokens=4000,  
     )
 
 def create_visualization_agent():
     """Create and configure the LLM instance specialized for DOT code generation"""
-    return ChatCohere(
-        model=os.getenv("COHERE_MODEL", "command-r-plus"),
+    return ChatOpenAI(
+        model="google/gemma-3n-e4b-it:free",
         temperature=0.1,  
-        cohere_api_key=os.getenv("COHERE_API_KEY"),
-        max_tokens=6000,  
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1",
+        max_tokens=6000, 
+    )
+
+def create_validation_agent():
+    """Create and configure the LLM instance specialized for content validation"""
+    return ChatOpenAI(
+        model="google/gemma-3n-e4b-it:free",
+        temperature=0.1,  
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        base_url="https://openrouter.ai/api/v1",
+        max_tokens=1000,  # Small token limit for efficiency
     )
 
 def get_agent_info():
@@ -40,22 +52,61 @@ def get_agent_info():
         dict: Information about each agent's configuration and purpose
     """
     return {
+        "validation_agent": {
+            "purpose": "Content type classification and input filtering",
+            "temperature": 0.1,
+            "max_tokens": 1000,
+            "optimization": "Fast and reliable content validation",
+            "provider": "OpenRouter",
+            "model": "google/gemma-3n-e4b-it:free"
+        },
         "summarization_agent": {
             "purpose": "Content analysis and structured summarization",
             "temperature": 0.1,
             "max_tokens": 4000,
-            "optimization": "Consistent, hierarchical output"
+            "optimization": "Consistent, hierarchical output",
+            "provider": "OpenRouter",
+            "model": "google/gemma-3n-e4b-it:free"
         },
         "visualization_agent": {
             "purpose": "DOT code generation and graph syntax",
             "temperature": 0.1,
             "max_tokens": 6000,
-            "optimization": "Precise syntax, complex structures"
+            "optimization": "Precise syntax, complex structures",
+            "provider": "OpenRouter", 
+            "model": "google/gemma-3n-e4b-it:free"
         }
     }
 
 def create_prompts():
-    """Create prompt templates for summarization and DOT generation"""
+    """Create prompt templates for validation, summarization and DOT generation"""
+    
+    validation_prompt = ChatPromptTemplate.from_template("""You are a content validation specialist. Your job is to determine if the provided text contains educational or lecture-style content suitable for knowledge graph creation.
+
+VALID CONTENT TYPES:
+- Academic lectures or presentations
+- Educational materials and explanations
+- Technical documentation and tutorials
+- Course content or training materials
+- Informational articles with learning value
+- Scientific or research explanations
+- How-to guides with educational content
+
+INVALID CONTENT TYPES:
+- Personal stories, narratives, or diary entries
+- Chat conversations or casual dialogue
+- News articles without educational value
+- Poetry, creative writing, or fiction
+- Simple lists without explanatory content
+- Random text or gibberish
+- Very short text (less than 100 words)
+- Marketing or promotional content
+
+Your job is to classify the content type, NOT evaluate its structure or organization.
+
+Respond with EXACTLY one word: either "VALID" or "INVALID"
+
+Content to validate: {input_text}""")
     
     summarizer_prompt = ChatPromptTemplate.from_template("""I want you to generate a detailed, hierarchical summary of a topic I provide, using the exact format described below. Your output should follow these formatting and content guidelines:
 
@@ -177,17 +228,18 @@ Hierarchical summary: {summary}
 
 Return ONLY the DOT code without any explanations, additional text, or any ` used for annotating code, so don't put the code inside markdown syntax.""")
     
-    return summarizer_prompt, dot_prompt
+    return validation_prompt, summarizer_prompt, dot_prompt
 
 def pipeline(input_text: str, progress_callback=None):
     """
     Multi-agent pipeline function that processes lecture text into knowledge graph
     Uses specialized agents for different tasks:
+    - Validation Agent: Content type classification and input filtering
     - Summarization Agent: Optimized for content analysis and structured summarization
     - Visualization Agent: Optimized for DOT code generation and graph syntax
     
     Args:
-        input_text (str): The lecture content to process
+        input_text (str): The content to process
         progress_callback (callable): Optional callback function for progress updates
     
     Returns:
@@ -195,23 +247,36 @@ def pipeline(input_text: str, progress_callback=None):
     """
     try:
         # Create specialized agents
+        validation_agent = create_validation_agent()
         summarization_agent = create_summarization_agent()
         visualization_agent = create_visualization_agent()
         
         # Get prompts
-        summarizer_prompt, dot_prompt = create_prompts()
+        validation_prompt, summarizer_prompt, dot_prompt = create_prompts()
         
         # Create specialized chains
+        validation_chain = validation_prompt | validation_agent
         summarizer_chain = summarizer_prompt | summarization_agent
         dot_chain = dot_prompt | visualization_agent
         
-        # Step 1: Summarization Agent processes the lecture
+        # Step 1: Validation Agent checks content type
         if progress_callback:
-            progress_callback("analyzing", "🔍 Summarization agent analyzing content...")
+            progress_callback("validating", "🔍 Validation agent checking content type...")
+        
+        validation_result = validation_chain.invoke({"input_text": input_text}).content.strip().upper()
+        
+        # Check if content is valid for processing
+        if "INVALID" in validation_result:
+            error_msg = "❌ Invalid content type detected. Please provide educational content such as lectures, tutorials, or informational articles suitable for creating knowledge graphs."
+            return error_msg, None
+        
+        # Step 2: Summarization Agent processes the lecture
+        if progress_callback:
+            progress_callback("analyzing", "� Summarization agent analyzing content...")
         
         summary = summarizer_chain.invoke({"lecture": input_text}).content
         
-        # Step 2: Visualization Agent generates DOT code
+        # Step 3: Visualization Agent generates DOT code
         if progress_callback:
             progress_callback("generating", "🎨 Visualization agent creating graph...")
         

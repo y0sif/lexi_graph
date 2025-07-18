@@ -16,7 +16,8 @@ from core.utils import (
 
 # Progress messages
 PROGRESS_MESSAGES = {
-    "analyzing": "🔍 Analyzing lecture content...",
+    "validating": "🔍 Validating content type...",
+    "analyzing": "� Analyzing lecture content...",
     "generating": "🎨 Generating knowledge diagram...",
     "rendering": "🖼️ Rendering visual graph...",
     "complete": "✅ Knowledge graph ready!"
@@ -24,7 +25,8 @@ PROGRESS_MESSAGES = {
 
 # Error messages
 ERROR_MESSAGES = {
-    "connection": "❌ Connection error - Is Ollama running?",
+    "invalid_content": "❌ Content validation failed - Please provide educational content",
+    "connection": "❌ Connection error - Check your OpenRouter API key",
     "analysis": "❌ Failed to analyze content - Please check your text",
     "generation": "❌ Failed to generate diagram - Please try again",
     "rendering": "❌ Failed to render graph - Please contact support"
@@ -167,19 +169,30 @@ def main():
         # Progress tracking
         with st.status("Generating your knowledge graph...", expanded=True) as status:
             try:
-                # Step 1: Analysis
-                status.update(label=PROGRESS_MESSAGES["analyzing"], state="running")
+                # Step 1: Validation
+                status.update(label=PROGRESS_MESSAGES["validating"], state="running")
                 time.sleep(0.5)  # Small delay for visual feedback
                 
-                # Step 2: Generation
+                # Step 2: Processing pipeline
                 summary, dot_code = pipeline(lecture_text, progress_callback)
                 
+                # Check if validation failed or processing failed
                 if dot_code is None:
                     status.update(label="❌ Processing failed", state="error")
-                    st.error(f"**Processing Error:** {summary}")
-                    if "Connection refused" in summary:
+                    
+                    # Check if it's a validation error (contains validation error message)
+                    if "Invalid content type detected" in summary:
+                        st.error(f"**Content Validation Failed:** {summary}")
+                        st.info("💡 **Tip:** Please provide educational content such as:\n"
+                               "- Academic lectures or presentations\n"
+                               "- Tutorial or course materials\n" 
+                               "- Technical documentation\n"
+                               "- Informational articles with learning value")
+                    elif "Connection refused" in summary or "API" in summary:
                         st.error(ERROR_MESSAGES["connection"])
-                        st.info("💡 **Quick Fix:** Make sure Ollama is running with: `ollama serve`")
+                        st.info("💡 **Quick Fix:** Check your OpenRouter API key in your .env file")
+                    else:
+                        st.error(f"**Processing Error:** {summary}")
                     return
                 
                 status.update(label=PROGRESS_MESSAGES["generating"], state="running")
@@ -254,8 +267,8 @@ def main():
         **LexiGraph** transforms educational content into visual knowledge graphs using AI.
         
         **How it works:**
-        1. 🔍 Analyzes your lecture content
-        2. 📝 Creates structured summaries  
+        1. 🔍 Validates content type
+        2. 📝 Analyzes and structures content
         3. 🎨 Generates visual diagrams
         4. 🖼️ Renders beautiful graphs
         
@@ -267,9 +280,17 @@ def main():
         
         st.markdown("### 🛠️ Requirements")
         st.markdown("""
-        - **Ollama** must be running locally
-        - **Model:** gemma3n:e2b
-        - **Port:** 11434 (default)
+        - **OpenRouter API** key required
+        - **Model:** google/gemma-3n-e4b-it:free
+        - **Internet connection** for API access
+        """)
+        
+        st.markdown("### 🤖 AI Agents")
+        st.markdown("""
+        **Three specialized agents:**
+        1. 🔍 **Validation Agent** - Content type checking
+        2. 📝 **Summarization Agent** - Structure analysis  
+        3. 🎨 **Visualization Agent** - Graph generation
         """)
         
         if st.button("🔄 Refresh Page"):
