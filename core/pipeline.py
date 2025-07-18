@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
+from .utils import clean_dot_code
 
 # Load environment variables
 load_dotenv()
@@ -36,7 +37,7 @@ def clean_deepseek_output(text: str) -> str:
 def create_llm():
     """Create and configure the LLM instance"""
     return ChatOllama(
-        model="deepseek-r1:1.5b",
+        model="gemma3n:e2b",
         temperature=0.1,
         num_ctx=8184,  # Context window
         base_url="http://localhost:11434",  # Default Ollama URL
@@ -115,44 +116,45 @@ Your output should follow these formatting and structural guidelines:
 Use the DOT language syntax
 Output valid Graphviz DOT code that can be rendered using tools like dot, xdot, or online Graphviz editors.
 
+IMPORTANT SYNTAX RULES:
+- Node names must be valid identifiers (letters, numbers, underscores only) or quoted strings
+- Use quoted strings for node names with spaces or special characters
+- All text content should go in the label attribute, not the node name
+- Edges connect node identifiers, not labels or descriptions
+
 Graph orientation
 Set the graph direction to left-to-right using rankdir=LR.
 
 Nodes
-Each item from the hierarchy (main topic, subtopics, details) should be represented as a separate node. Use shape=box and a simple lightgray color fill style for clarity.
+Each item from the hierarchy should be represented as a separate node. Use shape=box and style=filled, color=lightgray for clarity.
+
+Node naming convention:
+- Use simple identifiers like: AI, ML, SupervisedLearning, etc.
+- Put the actual text in the label attribute
+- Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data"];
 
 Edges
-Connect nodes based on their parent-child relationships, following the hierarchy. The edges should represent the "is part of" or "belongs to" relationship.
+Connect nodes based on their parent-child relationships using simple node identifiers.
 
-Node labels
-Use the actual text from the summary as node labels. For multiline labels (e.g., descriptions or examples), use \n to format them properly within the node.
-
-Hierarchy traversal
-Preserve the hierarchy depth by linking each child node to its immediate parent. Do not skip levels, even if some levels are just categorical.
-
-Example style
-Your DOT code should look similar to this:
-
+Example of correct syntax:
 digraph TopicSummary {{
     rankdir=LR;
     node [shape=box, style=filled, color=lightgray];
 
-    AI [label="Artificial Intelligence (AI)"];
-    ML [label="Machine Learning (ML)"];
+    AI [label="Artificial Intelligence"];
+    ML [label="Machine Learning"];
+    SupervisedLearning [label="Supervised Learning\\nTrains on labeled data"];
+    
     AI -> ML;
-
-    Supervised [label="Supervised Learning"];
-    ML -> Supervised;
-
-    LinearRegression [label="Linear Regression\nPredicts continuous values"];
-    Supervised -> LinearRegression;
+    ML -> SupervisedLearning;
 }} 
+
 Goal:
-Produce a clean, readable DOT file that accurately reflects the logical structure of the input summary. The graph should help someone visually understand the hierarchical relationships between topics, methods, and concepts in AI.
+Produce a clean, valid DOT file with proper syntax that accurately reflects the logical structure of the input summary.
 
 Hierarchical summary: {summary}
 
-Return ONLY the DOT code without any explanations, additional text, or any ` used for annotating code, so don't put the code inside markdown syntax.""")
+""")
     
     return summarizer_prompt, dot_prompt
 
@@ -181,14 +183,16 @@ def pipeline(input_text: str, progress_callback=None):
             progress_callback("analyzing", "🔍 Analyzing lecture content...")
         
         summary_raw = summarizer_chain.invoke({"lecture": input_text}).content
-        summary = clean_deepseek_output(summary_raw)
+        # summary = clean_deepseek_output(summary_raw)
+        summary = summary_raw
         
         # Step 2: Generate DOT code
         if progress_callback:
             progress_callback("generating", "🎨 Generating knowledge diagram...")
         
         dot_code_raw = dot_chain.invoke({"summary": summary}).content
-        dot_code = clean_deepseek_output(dot_code_raw)
+        # dot_code = clean_dot_code(clean_deepseek_output(dot_code_raw))
+        dot_code = clean_dot_code(dot_code_raw)
         
         return summary, dot_code
         
