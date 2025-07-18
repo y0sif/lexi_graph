@@ -11,44 +11,147 @@ from langchain_core.prompts import ChatPromptTemplate
 # Load environment variables
 load_dotenv()
 
+def clean_deepseek_output(text: str) -> str:
+    """
+    Clean DeepSeek model output by removing thinking tags and extracting actual content
+    
+    Args:
+        text (str): Raw output from DeepSeek model
+    
+    Returns:
+        str: Cleaned output without thinking tags
+    """
+    # Remove <think> tags and content between them
+    import re
+    
+    # Pattern to match <think>...</think> blocks (including multiline)
+    think_pattern = r'<think>.*?</think>'
+    cleaned_text = re.sub(think_pattern, '', text, flags=re.DOTALL)
+    
+    # Clean up extra whitespace and newlines
+    cleaned_text = cleaned_text.strip()
+    
+    return cleaned_text
+
 def create_llm():
     """Create and configure the LLM instance"""
     return ChatOllama(
-        model="gemma3n:e2b",
-        temperature=0.0,
-        num_ctx=4096,  # Context window
+        model="deepseek-r1:1.5b",
+        temperature=0.1,
+        num_ctx=8184,  # Context window
         base_url="http://localhost:11434",  # Default Ollama URL
     )
 
 def create_prompts():
     """Create prompt templates for summarization and DOT generation"""
     
-    summarizer_prompt = ChatPromptTemplate.from_template("""Create a hierarchical summary of this lecture content: {lecture}
+    summarizer_prompt = ChatPromptTemplate.from_template("""I want you to generate a detailed, hierarchical summary of a topic I provide, using the exact format described below. Your output should follow these formatting and content guidelines:
 
-Format the summary as a tree structure using dashes (-) for each level. Maintain the original language of the content. Example format:
+Use a hierarchical structure
+Begin with the main topic, then move to subtopics, and then to sub-subtopics as needed. Each level should be clearly indented using this pattern:
 
 Main Topic:
--Subtopic 1
---Detail A
---Detail B
--Subtopic 2
---Detail C
---Detail D
+- Subtopic
+-- Sub-subtopic
+--- Detail or explanation
+Use indentation and hyphens to express structure
+Do not use prose or paragraphs. The entire output should be structured as an indented bullet-point list, making it easy to scan and review.
 
-try to make each subsection small and concise, but still informative.
-                                                         
-if you need to make a subsection of a subsection do it.
+Provide definitions and explanations at each level
+Each topic or algorithm must include a brief, clear description. If relevant, include:
 
-Return ONLY the hierarchical summary without any explanations or additional text.
-                                                     
-If it is already summarized in the way shown above, return it as is.""")
+What it does
 
-    dot_prompt = ChatPromptTemplate.from_template("""Given the following hierarchical summary of a lecture: {summary}
+Where or when it is used
 
-Create a digraph that represents the hierarchy. Use proper graphiz DOT syntax with directed edges (->) and include 'rankdir=LR' in the graph attributes. Make sure to preserve the language of the content and add appropriate styling for better visualization.
+A simple real-world example
 
-If the input given is not a summary, do not generate a DOT code for it.
-                                              
+Important strengths, weaknesses, or notes
+
+Cover both broad and detailed information
+For example, if the topic includes "Supervised Learning," list common algorithms under it, and for each algorithm, include further sub-points explaining its function and use cases.
+
+Avoid unnecessary repetition or filler
+Keep the summary concise but complete. Focus on clarity, logical organization, and informativeness.
+
+Use this format as a style guide:
+
+Artificial Intelligence (AI):
+- Definition: Machines simulating human-like intelligence (e.g., learning, problem-solving, perception)
+- Includes:
+-- Machine Learning (ML)
+-- Expert Systems
+-- Natural Language Processing (NLP)
+-- Robotics
+
+Machine Learning (ML):
+- Definition: Algorithms that learn patterns from data and make decisions with minimal human intervention
+- Types:
+-- Supervised Learning
+--- Data: Labeled (input-output pairs)
+--- Goal: Learn a function to predict outputs from inputs
+--- Examples: Spam detection, price prediction
+--- Common Algorithms:
+---- Linear Regression
+----- Predicts a continuous output from linear input relationships
+----- Example: Predicting house prices from area and number of rooms
+----- Simple, fast, and interpretable
+
+Goal:
+Produce a structured, study-ready summary. It should read like a clear and comprehensive cheat sheet or lecture outline on the topic.
+
+Lecture content: {lecture}
+
+Return ONLY the hierarchical summary without any explanations or additional text.""")
+
+    dot_prompt = ChatPromptTemplate.from_template("""I want you to generate a Graphviz DOT file that visually represents a hierarchical summary of a topic. The input is a structured summary written in the following indentation style:
+
+Main Topic:
+- Subtopic
+-- Sub-subtopic
+--- Detail
+Your output should follow these formatting and structural guidelines:
+
+Use the DOT language syntax
+Output valid Graphviz DOT code that can be rendered using tools like dot, xdot, or online Graphviz editors.
+
+Graph orientation
+Set the graph direction to left-to-right using rankdir=LR.
+
+Nodes
+Each item from the hierarchy (main topic, subtopics, details) should be represented as a separate node. Use shape=box and a simple lightgray color fill style for clarity.
+
+Edges
+Connect nodes based on their parent-child relationships, following the hierarchy. The edges should represent the "is part of" or "belongs to" relationship.
+
+Node labels
+Use the actual text from the summary as node labels. For multiline labels (e.g., descriptions or examples), use \n to format them properly within the node.
+
+Hierarchy traversal
+Preserve the hierarchy depth by linking each child node to its immediate parent. Do not skip levels, even if some levels are just categorical.
+
+Example style
+Your DOT code should look similar to this:
+
+digraph TopicSummary {{
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightgray];
+
+    AI [label="Artificial Intelligence (AI)"];
+    ML [label="Machine Learning (ML)"];
+    AI -> ML;
+
+    Supervised [label="Supervised Learning"];
+    ML -> Supervised;
+
+    LinearRegression [label="Linear Regression\nPredicts continuous values"];
+    Supervised -> LinearRegression;
+}} 
+Goal:
+Produce a clean, readable DOT file that accurately reflects the logical structure of the input summary. The graph should help someone visually understand the hierarchical relationships between topics, methods, and concepts in AI.
+
+Hierarchical summary: {summary}
+
 Return ONLY the DOT code without any explanations, additional text, or any ` used for annotating code, so don't put the code inside markdown syntax.""")
     
     return summarizer_prompt, dot_prompt
@@ -77,13 +180,15 @@ def pipeline(input_text: str, progress_callback=None):
         if progress_callback:
             progress_callback("analyzing", "🔍 Analyzing lecture content...")
         
-        summary = summarizer_chain.invoke({"lecture": input_text}).content
+        summary_raw = summarizer_chain.invoke({"lecture": input_text}).content
+        summary = clean_deepseek_output(summary_raw)
         
         # Step 2: Generate DOT code
         if progress_callback:
             progress_callback("generating", "🎨 Generating knowledge diagram...")
         
-        dot_code = dot_chain.invoke({"summary": summary}).content
+        dot_code_raw = dot_chain.invoke({"summary": summary}).content
+        dot_code = clean_deepseek_output(dot_code_raw)
         
         return summary, dot_code
         
