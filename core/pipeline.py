@@ -1,26 +1,58 @@
 """
 Core pipeline functions for LexiGraph
-Handles LLM processing and knowledge graph generation
+Handles multi-agent LLM processing and knowledge graph generation
+Uses specialized agents for different tasks:
+- Summarization Agent: Optimized for content analysis
+- Visualization Agent: Optimized for graph generation
 """
 
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_cohere import ChatCohere
 from langchain_core.prompts import ChatPromptTemplate
 from .utils import clean_dot_code
 
-# Load environment variables
 load_dotenv()
 
-def create_llm():
-    """Create and configure the LLM instance for OpenRouter"""
-    return ChatOpenAI(
-        model="google/gemma-3n-e4b-it:free",  # OpenRouter model name format
-        temperature=0.1,
-        base_url="https://openrouter.ai/api/v1",
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        max_tokens=8000,
+def create_summarization_agent():
+    """Create and configure the LLM instance specialized for summarization"""
+    return ChatCohere(
+        model=os.getenv("COHERE_MODEL", "command-r-plus"),
+        temperature=0.1,  
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        max_tokens=4000,  
     )
+
+def create_visualization_agent():
+    """Create and configure the LLM instance specialized for DOT code generation"""
+    return ChatCohere(
+        model=os.getenv("COHERE_MODEL", "command-r-plus"),
+        temperature=0.1,  
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        max_tokens=6000,  
+    )
+
+def get_agent_info():
+    """
+    Returns information about the specialized agents
+    
+    Returns:
+        dict: Information about each agent's configuration and purpose
+    """
+    return {
+        "summarization_agent": {
+            "purpose": "Content analysis and structured summarization",
+            "temperature": 0.1,
+            "max_tokens": 4000,
+            "optimization": "Consistent, hierarchical output"
+        },
+        "visualization_agent": {
+            "purpose": "DOT code generation and graph syntax",
+            "temperature": 0.1,
+            "max_tokens": 6000,
+            "optimization": "Precise syntax, complex structures"
+        }
+    }
 
 def create_prompts():
     """Create prompt templates for summarization and DOT generation"""
@@ -107,12 +139,6 @@ Set the graph direction to left-to-right using rankdir=LR.
 Nodes and Color Grouping
 Each item from the hierarchy should be represented as a separate node. Use shape=box and style=filled for clarity.
 
-Color scheme for parent-child relationships:
-- Nodes that share the same parent should have the same color
-- Use these colors in order: lightblue, lightgreen, lightcoral, lightyellow, lightpink, lightcyan, wheat, lavender, mistyrose, honeydew
-- Root node(s) should use lightgray
-- Apply colors systematically: all children of the first parent get lightblue, all children of the second parent get lightgreen, etc.
-
 Node naming convention:
 - Use simple identifiers like: AI, ML, SupervisedLearning, etc.
 - Put the actual text in the label attribute
@@ -155,7 +181,10 @@ Return ONLY the DOT code without any explanations, additional text, or any ` use
 
 def pipeline(input_text: str, progress_callback=None):
     """
-    Main pipeline function that processes lecture text into knowledge graph
+    Multi-agent pipeline function that processes lecture text into knowledge graph
+    Uses specialized agents for different tasks:
+    - Summarization Agent: Optimized for content analysis and structured summarization
+    - Visualization Agent: Optimized for DOT code generation and graph syntax
     
     Args:
         input_text (str): The lecture content to process
@@ -165,23 +194,26 @@ def pipeline(input_text: str, progress_callback=None):
         tuple: (summary, dot_code) or (error_message, None) on failure
     """
     try:
-        # Create LLM and prompts
-        llm = create_llm()
+        # Create specialized agents
+        summarization_agent = create_summarization_agent()
+        visualization_agent = create_visualization_agent()
+        
+        # Get prompts
         summarizer_prompt, dot_prompt = create_prompts()
         
-        # Create chains
-        summarizer_chain = summarizer_prompt | llm
-        dot_chain = dot_prompt | llm
+        # Create specialized chains
+        summarizer_chain = summarizer_prompt | summarization_agent
+        dot_chain = dot_prompt | visualization_agent
         
-        # Step 1: Generate summary
+        # Step 1: Summarization Agent processes the lecture
         if progress_callback:
-            progress_callback("analyzing", "🔍 Analyzing lecture content...")
+            progress_callback("analyzing", "🔍 Summarization agent analyzing content...")
         
         summary = summarizer_chain.invoke({"lecture": input_text}).content
         
-        # Step 2: Generate DOT code
+        # Step 2: Visualization Agent generates DOT code
         if progress_callback:
-            progress_callback("generating", "🎨 Generating knowledge diagram...")
+            progress_callback("generating", "🎨 Visualization agent creating graph...")
         
         dot_code_raw = dot_chain.invoke({"summary": summary}).content
         dot_code = clean_dot_code(dot_code_raw)

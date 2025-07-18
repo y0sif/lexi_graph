@@ -41,6 +41,11 @@ def init_session_state():
     if 'lecture_text' not in st.session_state:
         st.session_state.lecture_text = ""
 
+def on_text_change():
+    """Callback for when text input changes"""
+    # This will trigger a rerun automatically when text changes
+    pass
+
 def progress_callback(stage, message):
     """Callback function for progress updates"""
     st.session_state.current_stage = stage
@@ -114,7 +119,8 @@ def main():
             value=st.session_state.lecture_text,
             height=300,
             placeholder="Enter your lecture notes, slides, or any educational content...",
-            key="lecture_input"
+            key="lecture_input",
+            on_change=on_text_change
         )
     
     with col2:
@@ -132,22 +138,29 @@ def main():
     # Action Section
     st.markdown("---")
     
-    # Input validation
+    # Input validation (only check validity, don't show warning)
     is_valid, error_message = validate_input_text(lecture_text)
+    generate_disabled = not is_valid
     
-    if not is_valid:
-        st.warning(error_message)
-        generate_disabled = True
-    else:
-        generate_disabled = False
+    # Generate button with dynamic text based on input state
+    button_text = "🚀 Generate Knowledge Graph"
+    if not lecture_text or not lecture_text.strip():
+        button_text = "✏️ Enter lecture content to generate graph"
+    elif len(lecture_text.strip()) < 50:
+        button_text = f"📝 Need at least {50 - len(lecture_text.strip())} more characters"
     
     # Generate button
     if st.button(
-        "🚀 Generate Knowledge Graph", 
+        button_text, 
         type="primary", 
         disabled=generate_disabled,
         use_container_width=True
     ):
+        # Double-check validation when button is clicked
+        if not is_valid:
+            st.error(f"**Input Error:** {error_message}")
+            return
+            
         # Clean up old files
         cleanup_old_files()
         
