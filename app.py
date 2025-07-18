@@ -42,6 +42,8 @@ def init_session_state():
         st.session_state.graph_path = ""
     if 'lecture_text' not in st.session_state:
         st.session_state.lecture_text = ""
+    if 'api_key' not in st.session_state:
+        st.session_state.api_key = ""
 
 def on_text_change():
     """Callback for when text input changes"""
@@ -59,6 +61,7 @@ def clear_results():
     st.session_state.current_summary = ""
     st.session_state.graph_path = ""
     st.session_state.lecture_text = ""
+    # Don't clear API key when clearing results
     st.rerun()
 
 def main():
@@ -110,6 +113,42 @@ def main():
     st.markdown('<div class="main-header">🔗 LexiGraph</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Transform lectures into visual knowledge graphs</div>', unsafe_allow_html=True)
     
+    # API Key Section
+    st.markdown("### 🔑 OpenRouter API Configuration")
+    
+    api_key_col1, api_key_col2 = st.columns([3, 1])
+    
+    with api_key_col1:
+        api_key = st.text_input(
+            "Enter your OpenRouter API Key:",
+            type="password",
+            value=st.session_state.api_key,
+            placeholder="sk-or-v1-...",
+            help="Get your free API key from https://openrouter.ai/keys",
+            key="api_key_input"
+        )
+    
+    with api_key_col2:
+        st.markdown("##### 🔗 Get API Key")
+        st.markdown("[OpenRouter Keys](https://openrouter.ai/keys)")
+        
+        if st.button("🗑️ Clear Key", use_container_width=True):
+            st.session_state.api_key = ""
+            st.rerun()
+    
+    # Update session state
+    st.session_state.api_key = api_key
+    
+    # Show API key status
+    if api_key and api_key.startswith("sk-or-v1-"):
+        st.success("✅ API key configured successfully!")
+    elif api_key:
+        st.warning("⚠️ API key should start with 'sk-or-v1-'")
+    else:
+        st.info("ℹ️ Please enter your OpenRouter API key to use the service.")
+    
+    st.markdown("---")
+    
     # Input Section
     st.markdown("### 📝 Enter Your Lecture Content")
     
@@ -142,11 +181,16 @@ def main():
     
     # Input validation (only check validity, don't show warning)
     is_valid, error_message = validate_input_text(lecture_text)
-    generate_disabled = not is_valid
+    has_api_key = bool(api_key and api_key.startswith("sk-or-v1-"))
+    generate_disabled = not is_valid or not has_api_key
     
     # Generate button with dynamic text based on input state
     button_text = "🚀 Generate Knowledge Graph"
-    if not lecture_text or not lecture_text.strip():
+    if not api_key:
+        button_text = "🔑 Enter OpenRouter API key to continue"
+    elif not api_key.startswith("sk-or-v1-"):
+        button_text = "🔑 Please enter a valid OpenRouter API key"
+    elif not lecture_text or not lecture_text.strip():
         button_text = "✏️ Enter lecture content to generate graph"
     elif len(lecture_text.strip()) < 50:
         button_text = f"📝 Need at least {50 - len(lecture_text.strip())} more characters"
@@ -159,6 +203,10 @@ def main():
         use_container_width=True
     ):
         # Double-check validation when button is clicked
+        if not has_api_key:
+            st.error("**API Key Required:** Please enter your OpenRouter API key to use the service.")
+            return
+            
         if not is_valid:
             st.error(f"**Input Error:** {error_message}")
             return
@@ -174,7 +222,7 @@ def main():
                 time.sleep(0.5)  # Small delay for visual feedback
                 
                 # Step 2: Processing pipeline
-                summary, dot_code = pipeline(lecture_text, progress_callback)
+                summary, dot_code = pipeline(lecture_text, progress_callback, api_key)
                 
                 # Check if validation failed or processing failed
                 if dot_code is None:
@@ -280,9 +328,15 @@ def main():
         
         st.markdown("### 🛠️ Requirements")
         st.markdown("""
-        - **OpenRouter API** key required
+        - **OpenRouter API** key required (enter above)
         - **Model:** google/gemma-3n-e4b-it:free
         - **Internet connection** for API access
+        
+        **Getting Started:**
+        1. Get free API key from [OpenRouter](https://openrouter.ai/keys)
+        2. Enter your API key above  
+        3. Paste educational content
+        4. Generate your knowledge graph!
         """)
         
         st.markdown("### 🤖 AI Agents")
