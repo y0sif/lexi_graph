@@ -5,42 +5,21 @@ Handles LLM processing and knowledge graph generation
 
 import os
 from dotenv import load_dotenv
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from .utils import clean_dot_code
 
 # Load environment variables
 load_dotenv()
 
-def clean_deepseek_output(text: str) -> str:
-    """
-    Clean DeepSeek model output by removing thinking tags and extracting actual content
-    
-    Args:
-        text (str): Raw output from DeepSeek model
-    
-    Returns:
-        str: Cleaned output without thinking tags
-    """
-    # Remove <think> tags and content between them
-    import re
-    
-    # Pattern to match <think>...</think> blocks (including multiline)
-    think_pattern = r'<think>.*?</think>'
-    cleaned_text = re.sub(think_pattern, '', text, flags=re.DOTALL)
-    
-    # Clean up extra whitespace and newlines
-    cleaned_text = cleaned_text.strip()
-    
-    return cleaned_text
-
 def create_llm():
-    """Create and configure the LLM instance"""
-    return ChatOllama(
-        model="gemma3n:e2b",
+    """Create and configure the LLM instance for OpenRouter"""
+    return ChatOpenAI(
+        model="moonshotai/kimi-k2:free",  # OpenRouter model name format
         temperature=0.1,
-        num_ctx=8184,  # Context window
-        base_url="http://localhost:11434",  # Default Ollama URL
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        max_tokens=4096,
     )
 
 def create_prompts():
@@ -154,7 +133,7 @@ Produce a clean, valid DOT file with proper syntax that accurately reflects the 
 
 Hierarchical summary: {summary}
 
-""")
+Return ONLY the DOT code without any explanations, additional text, or any ` used for annotating code, so don't put the code inside markdown syntax.""")
     
     return summarizer_prompt, dot_prompt
 
@@ -182,16 +161,13 @@ def pipeline(input_text: str, progress_callback=None):
         if progress_callback:
             progress_callback("analyzing", "🔍 Analyzing lecture content...")
         
-        summary_raw = summarizer_chain.invoke({"lecture": input_text}).content
-        # summary = clean_deepseek_output(summary_raw)
-        summary = summary_raw
+        summary = summarizer_chain.invoke({"lecture": input_text}).content
         
         # Step 2: Generate DOT code
         if progress_callback:
             progress_callback("generating", "🎨 Generating knowledge diagram...")
         
         dot_code_raw = dot_chain.invoke({"summary": summary}).content
-        # dot_code = clean_dot_code(clean_deepseek_output(dot_code_raw))
         dot_code = clean_dot_code(dot_code_raw)
         
         return summary, dot_code
