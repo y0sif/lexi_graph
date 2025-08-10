@@ -170,106 +170,251 @@ def validate_api_key(api_key):
 
 # Custom CSS for better styling
 custom_css = """
+/* Modern, clean styling with good readability */
 .gradio-container {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #000000 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
 }
 
-.gradio-container * {
-    color: #000000 !important;
+/* Main content area with modern card design */
+.gradio-container .gr-block {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    margin: 1rem;
+    padding: 2rem;
+}
+
+/* Clean text styling */
+.gradio-container {
+    color: #2d3748;
+    line-height: 1.6;
+}
+
+.gradio-container h1, .gradio-container h2, .gradio-container h3, 
+.gradio-container h4, .gradio-container h5, .gradio-container h6 {
+    color: #1a202c !important;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.gradio-container p {
+    color: #2d3748 !important;
+    margin-bottom: 1rem;
 }
 
 .gradio-container label {
-    color: #000000 !important;
-    font-weight: 500;
+    color: #1a202c !important;
+    font-weight: 500 !important;
+    font-size: 0.95rem;
 }
 
-.gradio-container p, .gradio-container div, .gradio-container span {
-    color: #000000 !important;
+/* Info text styling */
+.gradio-container .gr-form .gr-box .gr-padded .gr-text-sm {
+    color: #4a5568 !important;
 }
 
-.gradio-container textarea, .gradio-container input {
-    color: #000000 !important;
-    background-color: #ffffff !important;
+.gradio-container .gr-form .gr-box .gr-padded .gr-text-sm a {
+    color: #667eea !important;
+    font-weight: 500 !important;
 }
 
+/* Modern input styling */
+.gradio-container textarea, 
+.gradio-container input {
+    background: #ffffff !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    color: #2d3748 !important;
+    font-size: 0.95rem;
+    padding: 12px 16px !important;
+    transition: all 0.2s ease;
+}
+
+.gradio-container textarea:focus, 
+.gradio-container input:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    outline: none !important;
+}
+
+/* Modern button styling */
+.gradio-container button {
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    padding: 12px 24px !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    font-size: 0.95rem !important;
+}
+
+.gradio-container .gr-button-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+}
+
+.gradio-container .gr-button-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3) !important;
+}
+
+.gradio-container .gr-button-secondary {
+    background: #f7fafc !important;
+    color: #4a5568 !important;
+    border: 2px solid #e2e8f0 !important;
+}
+
+.gradio-container .gr-button-secondary:hover {
+    background: #edf2f7 !important;
+    border-color: #cbd5e0 !important;
+}
+
+/* Header styling */
 .main-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     text-align: center;
-    color: #1f77b4 !important;
-    font-size: 2.5rem;
-    font-weight: bold;
+    font-size: 3rem;
+    font-weight: 700;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
 }
 
 .subtitle {
     text-align: center;
-    color: #333333 !important;
-    font-size: 1.2rem;
+    color: #718096;
+    font-size: 1.25rem;
     margin-bottom: 2rem;
+    font-weight: 400;
 }
 
+/* Modern info boxes */
 .info-box {
-    background: #e7f3ff;
-    border: 1px solid #bee5eb;
+    background: linear-gradient(135deg, #e6fffa 0%, #f0fff4 100%);
+    border: 1px solid #9ae6b4;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    color: #2d3748;
+}
+
+.warning-box {
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border: 2px solid #f6ad55;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    color: #2d3748;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.warning-box p {
+    color: #2d3748 !important;
+    margin-bottom: 0.75rem;
+}
+
+.warning-box strong {
+    color: #1a202c !important;
+}
+
+.warning-box small {
+    color: #4a5568 !important;
+}
+
+/* Modern cards for side panels */
+.info-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 2px solid #e2e8f0;
+}
+
+.info-card h4 {
+    color: #1a202c !important;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.info-card p {
+    color: #2d3748 !important;
+    margin-bottom: 0.75rem;
+}
+
+.info-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-card li {
+    color: #2d3748 !important;
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.info-card li:before {
+    content: "•";
+    color: #667eea;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.info-card strong {
+    color: #1a202c !important;
+}
+
+/* Status messages */
+.status-success {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+    border-left: 4px solid #48bb78;
+    color: #1a202c !important;
+    padding: 1rem 1.5rem;
     border-radius: 8px;
-    padding: 1rem;
     margin: 1rem 0;
-    color: #000000 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.success-box {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
+.status-error {
+    background: linear-gradient(135deg, #ffffff 0%, #fed7d7 100%);
+    border-left: 4px solid #f56565;
+    color: #1a202c !important;
+    padding: 1rem 1.5rem;
     border-radius: 8px;
-    padding: 1rem;
     margin: 1rem 0;
-    color: #000000 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.error-box {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 1rem 0;
-    color: #000000 !important;
+/* Image container */
+.gradio-container .gr-image {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-/* Ensure button text is readable */
-.gradio-container button {
-    color: #ffffff !important;
+/* Links */
+.gradio-container a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
 }
 
-.gradio-container button[data-testid="primary-button"] {
-    background-color: #007bff !important;
-    color: #ffffff !important;
+.gradio-container a:hover {
+    color: #5a67d8;
+    text-decoration: underline;
 }
 
-.gradio-container button[data-testid="secondary-button"] {
-    background-color: #6c757d !important;
-    color: #ffffff !important;
-}
-
-/* Fix any specific text areas or inputs */
-.gradio-container .prose {
-    color: #000000 !important;
-}
-
-.gradio-container .prose h1, 
-.gradio-container .prose h2, 
-.gradio-container .prose h3, 
-.gradio-container .prose h4, 
-.gradio-container .prose h5, 
-.gradio-container .prose h6 {
-    color: #000000 !important;
-}
-
-.gradio-container .prose p {
-    color: #000000 !important;
-}
-
-.gradio-container .prose ul li {
-    color: #000000 !important;
+/* Remove forced colors that might conflict */
+.gradio-container * {
+    color: inherit;
 }
 """
 
@@ -302,10 +447,10 @@ def create_interface():
                 api_key_status = gr.HTML(value="ℹ️ Please enter your Anthropic API key to use the service.")
             with gr.Column(scale=1):
                 gr.HTML("""
-                    <div style="padding: 1rem; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin-top: 1.5rem;">
-                        <p><strong>🔗 Get Your API Key:</strong></p>
-                        <p><a href="https://console.anthropic.com/" target="_blank" style="color: #007bff;">Anthropic Console</a></p>
-                        <p><small>Your API key is used securely and not stored.</small></p>
+                    <div class="warning-box">
+                        <p><strong style="color: #1a202c !important;">🔗 Get Your API Key:</strong></p>
+                        <p><a href="https://console.anthropic.com/" target="_blank" style="color: #667eea !important; font-weight: 500;">Anthropic Console</a></p>
+                        <p><small style="color: #4a5568 !important;">Your API key is used securely and not stored.</small></p>
                     </div>
                 """)
         
@@ -328,7 +473,7 @@ def create_interface():
             
             with gr.Column(scale=1):
                 gr.HTML("""
-                    <div style="padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                    <div class="info-card">
                         <h4>🤖 AI Agents</h4>
                         <p><strong>Three specialized agents:</strong></p>
                         <ul>
@@ -405,20 +550,6 @@ def create_interface():
             outputs=[lecture_input, api_key_input, graph_output, summary_output, download_file]
         )
         
-        # Footer with additional information
-        gr.HTML("""
-            <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
-                <h4>ℹ️ About LexiGraph</h4>
-                <p><strong>LexiGraph</strong> transforms educational content into visual knowledge graphs using AI.</p>
-                
-                <p><strong>How it works:</strong></p>
-                <p>🔍 Validates content type → 📝 Analyzes and structures content → 🎨 Generates visual diagrams → 🖼️ Renders beautiful graphs</p>
-                
-                <p><strong>Privacy:</strong> Your API key and content are processed securely and not stored on our servers.</p>
-                <p><a href="https://console.anthropic.com/" target="_blank">Get your API key from Anthropic Console</a></p>
-            </div>
-        """)
-    
     return app
 
 def main():
