@@ -18,15 +18,17 @@ from core.utils import (
 current_results = {
     "summary": "",
     "graph_path": "",
-    "processing": False
+    "processing": False,
+    "api_key": ""
 }
 
-def process_lecture(lecture_text, progress=gr.Progress()):
+def process_lecture(lecture_text, api_key, progress=gr.Progress()):
     """
     Process lecture text and generate knowledge graph
     
     Args:
         lecture_text (str): Input lecture content
+        api_key (str): Anthropic API key
         progress: Gradio progress tracker
     
     Returns:
@@ -35,7 +37,27 @@ def process_lecture(lecture_text, progress=gr.Progress()):
     global current_results
     
     # Reset results
-    current_results = {"summary": "", "graph_path": "", "processing": True}
+    current_results = {"summary": "", "graph_path": "", "processing": True, "api_key": api_key}
+    
+    # API Key validation
+    if not api_key or not api_key.strip():
+        return (
+            "❌ **Error:** Please enter your Anthropic API key to use the service.",
+            None,
+            "",
+            None
+        )
+    
+    if not api_key.startswith("sk-ant-"):
+        return (
+            "❌ **Error:** Invalid API key format. Anthropic API keys should start with 'sk-ant-'",
+            None,
+            "",
+            None
+        )
+    
+    # Set the API key as environment variable for the pipeline
+    os.environ["ANTHROPIC_API_KEY"] = api_key
     
     # Input validation
     if not lecture_text or not lecture_text.strip():
@@ -134,8 +156,17 @@ def load_example():
 def clear_all():
     """Clear all inputs and outputs"""
     global current_results
-    current_results = {"summary": "", "graph_path": "", "processing": False}
+    current_results = {"summary": "", "graph_path": "", "processing": False, "api_key": ""}
     return "", "", None, "", None
+
+def validate_api_key(api_key):
+    """Validate API key and return status message"""
+    if not api_key or not api_key.strip():
+        return "ℹ️ Please enter your Anthropic API key to use the service."
+    elif not api_key.startswith("sk-ant-"):
+        return "⚠️ API key should start with 'sk-ant-'. Please check your key."
+    else:
+        return "✅ API key format looks correct!"
 
 # Custom CSS for better styling
 custom_css = """
@@ -255,9 +286,30 @@ def create_interface():
         # API Key info
         gr.HTML("""
             <div class="info-box">
-                ℹ️ <strong>API Configuration:</strong> Using Anthropic API key from environment file (.env)
+                🔑 <strong>API Configuration:</strong> Enter your Anthropic API key below to use the service
             </div>
         """)
+        
+        # API Key Section
+        with gr.Row():
+            with gr.Column(scale=3):
+                api_key_input = gr.Textbox(
+                    label="🔑 Anthropic API Key",
+                    placeholder="sk-ant-...",
+                    type="password",
+                    info="Get your API key from https://console.anthropic.com/"
+                )
+                api_key_status = gr.HTML(value="ℹ️ Please enter your Anthropic API key to use the service.")
+            with gr.Column(scale=1):
+                gr.HTML("""
+                    <div style="padding: 1rem; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin-top: 1.5rem;">
+                        <p><strong>🔗 Get Your API Key:</strong></p>
+                        <p><a href="https://console.anthropic.com/" target="_blank" style="color: #007bff;">Anthropic Console</a></p>
+                        <p><small>Your API key is used securely and not stored.</small></p>
+                    </div>
+                """)
+        
+        gr.HTML("<hr>")
         
         # Main interface
         with gr.Row():
@@ -294,7 +346,7 @@ def create_interface():
                         
                         <h4>🛠️ Requirements</h4>
                         <ul>
-                            <li><strong>Anthropic API</strong> key in .env file</li>
+                            <li><strong>Anthropic API</strong> key (enter above)</li>
                             <li><strong>Model:</strong> claude-3-5-haiku-20241022</li>
                             <li><strong>Internet connection</strong> for API access</li>
                         </ul>
@@ -330,9 +382,15 @@ def create_interface():
         )
         
         # Event handlers
+        api_key_input.change(
+            fn=validate_api_key,
+            inputs=[api_key_input],
+            outputs=[api_key_status]
+        )
+        
         generate_btn.click(
             fn=process_lecture,
-            inputs=[lecture_input],
+            inputs=[lecture_input, api_key_input],
             outputs=[status_output, graph_output, summary_output, download_file],
             show_progress=True
         )
@@ -344,7 +402,7 @@ def create_interface():
         
         clear_btn.click(
             fn=clear_all,
-            outputs=[lecture_input, summary_output, graph_output, status_output, download_file]
+            outputs=[lecture_input, api_key_input, graph_output, summary_output, download_file]
         )
         
         # Footer with additional information
@@ -356,7 +414,7 @@ def create_interface():
                 <p><strong>How it works:</strong></p>
                 <p>🔍 Validates content type → 📝 Analyzes and structures content → 🎨 Generates visual diagrams → 🖼️ Renders beautiful graphs</p>
                 
-                <p><strong>Configuration:</strong> Add <code>ANTHROPIC_API_KEY=your_key_here</code> to your .env file</p>
+                <p><strong>Privacy:</strong> Your API key and content are processed securely and not stored on our servers.</p>
                 <p><a href="https://console.anthropic.com/" target="_blank">Get your API key from Anthropic Console</a></p>
             </div>
         """)
