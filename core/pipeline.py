@@ -1,6 +1,7 @@
 """
 Core pipeline functions for LexiGraph
-Handles multi-agent LLM processing and knowledge graph generation via Anthropic
+Handles multi-agent LLM processing and knowledge graph generation via multiple providers
+Supports: Anthropic, OpenAI, OpenRouter
 Uses specialized agents for different tasks:
 - Summarization Agent: Optimized for content analysis
 - Visualization Agent: Optimized for graph generation
@@ -9,37 +10,56 @@ Uses specialized agents for different tasks:
 import os
 from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from .utils import clean_dot_code
 
 load_dotenv()
 
+def get_llm_instance(model_name=None, temperature=0.1, max_tokens=4000):
+    """
+    Create LLM instance based on environment configuration
+    Supports multiple providers: Anthropic, OpenAI, OpenRouter
+    """
+    provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+    model = model_name or os.getenv("LLM_MODEL", "claude-3-5-haiku-20241022")
+    
+    if provider == "anthropic":
+        return ChatAnthropic(
+            model=model,
+            temperature=temperature,
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            max_tokens=max_tokens,
+        )
+    elif provider == "openai":
+        return ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            api_key=os.getenv("OPENAI_API_KEY"),
+            max_tokens=max_tokens,
+        )
+    elif provider == "openrouter":
+        return ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
+            max_tokens=max_tokens,
+        )
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
+
 def create_summarization_agent():
     """Create and configure the LLM instance specialized for summarization"""
-    return ChatAnthropic(
-        model="claude-3-5-haiku-20241022",
-        temperature=0.1,  
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        max_tokens=4000,  
-    )
+    return get_llm_instance()
 
 def create_visualization_agent():
     """Create and configure the LLM instance specialized for DOT code generation"""
-    return ChatAnthropic(
-        model="claude-3-5-haiku-20241022",
-        temperature=0.1,  
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        max_tokens=4000, 
-    )
+    return get_llm_instance()
 
 def create_validation_agent():
     """Create and configure the LLM instance specialized for content validation"""
-    return ChatAnthropic(
-        model="claude-3-5-haiku-20241022",
-        temperature=0.1,  
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        max_tokens=1000,  # Small token limit for efficiency
-    )
+    return get_llm_instance(max_tokens=1000)  # Small token limit for efficiency
 
 def get_agent_info():
     """

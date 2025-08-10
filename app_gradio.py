@@ -22,13 +22,15 @@ current_results = {
     "api_key": ""
 }
 
-def process_lecture(lecture_text, api_key, progress=gr.Progress()):
+def process_lecture(lecture_text, provider, model, api_key, progress=gr.Progress()):
     """
     Process lecture text and generate knowledge graph
     
     Args:
         lecture_text (str): Input lecture content
-        api_key (str): Anthropic API key
+        provider (str): AI provider (Anthropic, OpenAI, OpenRouter)
+        model (str): Model name to use
+        api_key (str): API key for the selected provider
         progress: Gradio progress tracker
     
     Returns:
@@ -42,22 +44,42 @@ def process_lecture(lecture_text, api_key, progress=gr.Progress()):
     # API Key validation
     if not api_key or not api_key.strip():
         return (
-            "❌ **Error:** Please enter your Anthropic API key to use the service.",
+            f"❌ **Error:** Please enter your {provider} API key to use the service.",
             None,
             "",
             None
         )
     
-    if not api_key.startswith("sk-ant-"):
-        return (
-            "❌ **Error:** Invalid API key format. Anthropic API keys should start with 'sk-ant-'",
-            None,
-            "",
-            None
-        )
+    # Validate API key format based on provider
+    validation_patterns = {
+        "Anthropic": "sk-ant-",
+        "OpenAI": "sk-",
+        "OpenRouter": "sk-or-"
+    }
+    
+    if provider in validation_patterns:
+        expected_pattern = validation_patterns[provider]
+        if not api_key.startswith(expected_pattern):
+            return (
+                f"❌ **Error:** Invalid {provider} API key format. {provider} API keys should start with '{expected_pattern}'",
+                None,
+                "",
+                None
+            )
     
     # Set the API key as environment variable for the pipeline
-    os.environ["ANTHROPIC_API_KEY"] = api_key
+    # Map providers to environment variable names
+    env_var_map = {
+        "Anthropic": "ANTHROPIC_API_KEY",
+        "OpenAI": "OPENAI_API_KEY", 
+        "OpenRouter": "OPENROUTER_API_KEY"
+    }
+    
+    os.environ[env_var_map[provider]] = api_key
+    
+    # Also set the model information for the pipeline
+    os.environ["LLM_PROVIDER"] = provider.lower()
+    os.environ["LLM_MODEL"] = model
     
     # Input validation
     if not lecture_text or not lecture_text.strip():
@@ -103,7 +125,7 @@ def process_lecture(lecture_text, api_key, progress=gr.Progress()):
             if "Invalid content type detected" in summary:
                 error_msg = f"❌ **Content Validation Failed:** {summary}\n\n💡 **Tip:** Please provide educational content such as:\n- Academic lectures or presentations\n- Tutorial or course materials\n- Technical documentation\n- Informational articles with learning value"
             elif "Connection refused" in summary or "API" in summary:
-                error_msg = f"❌ **Connection Error:** Check your Anthropic API key in your .env file\n\nError details: {summary}"
+                error_msg = f"❌ **Connection Error:** Check your {provider} API key and model selection\n\nError details: {summary}"
             else:
                 error_msg = f"❌ **Processing Error:** {summary}"
             
@@ -159,14 +181,77 @@ def clear_all():
     current_results = {"summary": "", "graph_path": "", "processing": False, "api_key": ""}
     return "", "", None, "", None
 
-def validate_api_key(api_key):
-    """Validate API key and return status message"""
+def update_models_and_placeholder(provider):
+    """Update available models and API key placeholder based on provider"""
+    model_choices = {
+        "Anthropic": [
+            "claude-3-5-haiku-20241022",
+            "claude-3-5-sonnet-20241022", 
+            "claude-3-opus-20240229",
+            "claude-3-haiku-20240307",
+            "claude-3-sonnet-20240229"
+        ],
+        "OpenAI": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4-turbo",
+            "gpt-4",
+            "gpt-3.5-turbo"
+        ],
+        "OpenRouter": [
+            # Free models
+            "google/gemma-2-9b-it:free",
+            "microsoft/phi-3-medium-128k-instruct:free",
+            "meta-llama/llama-3.1-8b-instruct:free",
+            "meta-llama/llama-3.2-3b-instruct:free",
+            "qwen/qwen-2-7b-instruct:free",
+            "huggingfaceh4/zephyr-7b-beta:free",
+            # Premium models
+            "anthropic/claude-3.5-sonnet",
+            "anthropic/claude-3.5-haiku",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "meta-llama/llama-3.1-405b-instruct",
+            "google/gemini-pro-1.5",
+            "x-ai/grok-beta",
+            "deepseek/deepseek-chat"
+        ]
+    }
+    
+    placeholders = {
+        "Anthropic": "sk-ant-...",
+        "OpenAI": "sk-...",
+        "OpenRouter": "sk-or-..."
+    }
+    
+    infos = {
+        "Anthropic": "Get your API key from https://console.anthropic.com/",
+        "OpenAI": "Get your API key from https://platform.openai.com/api-keys",
+        "OpenRouter": "Get your API key from https://openrouter.ai/keys (Free models available!)"
+    }
+    
+    return (
+        gr.Dropdown(choices=model_choices[provider], value=model_choices[provider][0]),
+        gr.Textbox(placeholder=placeholders[provider], label=f"🔑 {provider} API Key", info=infos[provider])
+    )
+
+def validate_api_key_universal(api_key, provider):
+    """Validate API key based on provider"""
     if not api_key or not api_key.strip():
-        return "ℹ️ Please enter your Anthropic API key to use the service."
-    elif not api_key.startswith("sk-ant-"):
-        return "⚠️ API key should start with 'sk-ant-'. Please check your key."
-    else:
-        return "✅ API key format looks correct!"
+        return f"ℹ️ Please enter your {provider} API key to use the service."
+    
+    validation_patterns = {
+        "Anthropic": ("sk-ant-", "Anthropic API keys should start with 'sk-ant-'"),
+        "OpenAI": ("sk-", "OpenAI API keys should start with 'sk-'"),
+        "OpenRouter": ("sk-or-", "OpenRouter API keys should start with 'sk-or-'")
+    }
+    
+    if provider in validation_patterns:
+        pattern, message = validation_patterns[provider]
+        if not api_key.startswith(pattern):
+            return f"⚠️ {message} Please check your key."
+    
+    return f"✅ {provider} API key format looks correct!"
 
 # Custom CSS for better styling
 custom_css = """
@@ -428,29 +513,65 @@ def create_interface():
             <div class="subtitle">Transform lectures into visual knowledge graphs</div>
         """)
         
-        # API Key info
+        # API Configuration info
         gr.HTML("""
             <div class="info-box">
-                🔑 <strong>API Configuration:</strong> Enter your Anthropic API key below to use the service
+                🆓 <strong>Free AI Models Available!</strong> OpenRouter provides access to free models like Gemma, Llama, and Phi-3. Select your preferred AI provider and model, then enter your API key.
             </div>
         """)
         
-        # API Key Section
+        # LLM Configuration Section
         with gr.Row():
             with gr.Column(scale=3):
-                api_key_input = gr.Textbox(
-                    label="🔑 Anthropic API Key",
-                    placeholder="sk-ant-...",
-                    type="password",
-                    info="Get your API key from https://console.anthropic.com/"
+                # Provider selection
+                provider_dropdown = gr.Dropdown(
+                    label="🤖 AI Provider",
+                    choices=["OpenRouter", "Anthropic", "OpenAI"],
+                    value="OpenRouter",
+                    info="Choose your preferred AI provider (OpenRouter has free models!)"
                 )
-                api_key_status = gr.HTML(value="ℹ️ Please enter your Anthropic API key to use the service.")
+                
+                # Model selection (will be updated based on provider)
+                model_dropdown = gr.Dropdown(
+                    label="🧠 Model",
+                    choices=[
+                        "google/gemma-2-9b-it:free",
+                        "microsoft/phi-3-medium-128k-instruct:free",
+                        "meta-llama/llama-3.1-8b-instruct:free",
+                        "meta-llama/llama-3.2-3b-instruct:free",
+                        "qwen/qwen-2-7b-instruct:free",
+                        "huggingfaceh4/zephyr-7b-beta:free",
+                        "anthropic/claude-3.5-sonnet",
+                        "anthropic/claude-3.5-haiku",
+                        "openai/gpt-4o",
+                        "openai/gpt-4o-mini",
+                        "meta-llama/llama-3.1-405b-instruct",
+                        "google/gemini-pro-1.5",
+                        "x-ai/grok-beta",
+                        "deepseek/deepseek-chat"
+                    ],
+                    value="google/gemma-2-9b-it:free",
+                    info="Select the AI model for knowledge graph generation (Free models available!)"
+                )
+                
+                # API Key input (placeholder will update based on provider)
+                api_key_input = gr.Textbox(
+                    label="🔑 OpenRouter API Key",
+                    placeholder="sk-or-...",
+                    type="password",
+                    info="Get your API key from https://openrouter.ai/keys (Free models available!)"
+                )
+                
+                api_key_status = gr.HTML(value="ℹ️ Please configure your AI provider and enter your API key.")
+            
             with gr.Column(scale=1):
-                gr.HTML("""
+                provider_info = gr.HTML("""
                     <div class="warning-box">
-                        <p><strong style="color: #1a202c !important;">🔗 Get Your API Key:</strong></p>
+                        <p><strong style="color: #1a202c !important;">🔗 Get API Keys:</strong></p>
+                        <p><a href="https://openrouter.ai/keys" target="_blank" style="color: #667eea !important; font-weight: 500;">🆓 OpenRouter (Free Models!)</a></p>
                         <p><a href="https://console.anthropic.com/" target="_blank" style="color: #667eea !important; font-weight: 500;">Anthropic Console</a></p>
-                        <p><small style="color: #4a5568 !important;">Your API key is used securely and not stored.</small></p>
+                        <p><a href="https://platform.openai.com/api-keys" target="_blank" style="color: #667eea !important; font-weight: 500;">OpenAI Platform</a></p>
+                        <p><small style="color: #4a5568 !important;">OpenRouter offers free access to Gemma, Llama, Phi-3 & more!</small></p>
                     </div>
                 """)
         
@@ -491,9 +612,17 @@ def create_interface():
                         
                         <h4>🛠️ Requirements</h4>
                         <ul>
-                            <li><strong>Anthropic API</strong> key (enter above)</li>
-                            <li><strong>Model:</strong> claude-3-5-haiku-20241022</li>
+                            <li><strong>AI Provider:</strong> OpenRouter (free models!), Anthropic, or OpenAI</li>
+                            <li><strong>API Key:</strong> From your chosen provider</li>
                             <li><strong>Internet connection</strong> for API access</li>
+                        </ul>
+                        
+                        <h4>🎯 Supported Models</h4>
+                        <ul>
+                            <li><strong>🆓 OpenRouter Free:</strong> Gemma-2, Llama-3.1/3.2, Phi-3, Qwen-2, Zephyr</li>
+                            <li><strong>OpenRouter Premium:</strong> Claude, GPT-4o, Llama-405B, Gemini, Grok</li>
+                            <li><strong>Anthropic:</strong> Claude 3.5 Haiku/Sonnet, Claude 3 Opus</li>
+                            <li><strong>OpenAI:</strong> GPT-4o, GPT-4 Turbo, GPT-3.5</li>
                         </ul>
                     </div>
                 """)
@@ -527,15 +656,21 @@ def create_interface():
         )
         
         # Event handlers
+        provider_dropdown.change(
+            fn=update_models_and_placeholder,
+            inputs=[provider_dropdown],
+            outputs=[model_dropdown, api_key_input]
+        )
+        
         api_key_input.change(
-            fn=validate_api_key,
-            inputs=[api_key_input],
+            fn=validate_api_key_universal,
+            inputs=[api_key_input, provider_dropdown],
             outputs=[api_key_status]
         )
         
         generate_btn.click(
             fn=process_lecture,
-            inputs=[lecture_input, api_key_input],
+            inputs=[lecture_input, provider_dropdown, model_dropdown, api_key_input],
             outputs=[status_output, graph_output, summary_output, download_file],
             show_progress=True
         )
