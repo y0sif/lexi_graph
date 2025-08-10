@@ -295,6 +295,10 @@ def main():
                             type="primary",
                             use_container_width=True
                         )
+
+            # Optional: Show summary in expandable section
+            with st.expander("📋 View Generated Summary (Optional)"):
+                st.text(st.session_state.current_summary)
             
             # Success message
             st.markdown(

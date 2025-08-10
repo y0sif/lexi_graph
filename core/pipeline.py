@@ -17,17 +17,17 @@ load_dotenv()
 def create_summarization_agent(api_key=None):
     """Create and configure the LLM instance specialized for summarization"""
     return ChatOpenAI(
-        model="google/gemma-3n-e4b-it:free",
+        model="google/gemma-3-27b-it:free",
         temperature=0.1,  
         api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
         base_url="https://openrouter.ai/api/v1",
-        max_tokens=4000,  
+        max_tokens=12000,  
     )
 
 def create_visualization_agent(api_key=None):
     """Create and configure the LLM instance specialized for DOT code generation"""
     return ChatOpenAI(
-        model="google/gemma-3n-e4b-it:free",
+        model="google/gemma-3-27b-it:free",
         temperature=0.1,  
         api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
         base_url="https://openrouter.ai/api/v1",
@@ -108,7 +108,11 @@ Respond with EXACTLY one word: either "VALID" or "INVALID"
 
 Content to validate: {input_text}""")
     
-    summarizer_prompt = ChatPromptTemplate.from_template("""I want you to generate a detailed, hierarchical summary of a topic I provide, using the exact format described below. Your output should follow these formatting and content guidelines:
+    summarizer_prompt = ChatPromptTemplate.from_template("""CRITICAL LANGUAGE REQUIREMENT: You MUST write your entire summary in the EXACT SAME LANGUAGE as the input lecture content. If the lecture is in Arabic, write EVERYTHING in Arabic. If in English, write EVERYTHING in English. Do NOT mix languages or translate anything.
+
+I want you to generate a detailed, hierarchical summary of a topic I provide, using the exact format described below. Your output should follow these formatting and content guidelines:
+
+LANGUAGE RULE: Match the input language exactly - Arabic content gets Arabic summary, English content gets English summary, etc.
 
 Use a hierarchical structure
 Begin with the main topic, then move to subtopics, and then to sub-subtopics as needed. Each level should be clearly indented using this pattern:
@@ -117,19 +121,16 @@ Main Topic:
 - Subtopic
 -- Sub-subtopic
 --- Detail or explanation
+
 Use indentation and hyphens to express structure
 Do not use prose or paragraphs. The entire output should be structured as an indented bullet-point list, making it easy to scan and review.
 
 Provide definitions and explanations at each level
 Each topic or algorithm must include a brief, clear description. If relevant, include:
-
-What it does
-
-Where or when it is used
-
-A simple real-world example
-
-Important strengths, weaknesses, or notes
+- What it does
+- Where or when it is used
+- A simple real-world example
+- Important strengths, weaknesses, or notes
 
 Cover both broad and detailed information
 For example, if the topic includes "Supervised Learning," list common algorithms under it, and for each algorithm, include further sub-points explaining its function and use cases.
@@ -137,7 +138,7 @@ For example, if the topic includes "Supervised Learning," list common algorithms
 Avoid unnecessary repetition or filler
 Keep the summary concise but complete. Focus on clarity, logical organization, and informativeness.
 
-Use this format as a style guide:
+Use this format as a style guide (NOTE: This example is in English, but adapt the structure to match your input language):
 
 Artificial Intelligence (AI):
 - Definition: Machines simulating human-like intelligence (e.g., learning, problem-solving, perception)
@@ -160,20 +161,24 @@ Machine Learning (ML):
 ----- Example: Predicting house prices from area and number of rooms
 ----- Simple, fast, and interpretable
 
-Goal:
-Produce a structured, study-ready summary. It should read like a clear and comprehensive cheat sheet or lecture outline on the topic.
+REMEMBER: Write your summary in the SAME LANGUAGE as the lecture content below.
 
 Lecture content: {lecture}
 
-Return ONLY the hierarchical summary without any explanations or additional text.""")
+Return ONLY the hierarchical summary in the same language as the input, without any explanations or additional text.""")
 
-    dot_prompt = ChatPromptTemplate.from_template("""I want you to generate a Graphviz DOT file that visually represents a hierarchical summary of a topic. The input is a structured summary written in the following indentation style:
+    dot_prompt = ChatPromptTemplate.from_template("""CRITICAL LANGUAGE REQUIREMENT: You MUST write ALL node labels in the EXACT SAME LANGUAGE as the input summary. If the summary is in Arabic, ALL labels must be in Arabic. If in English, ALL labels must be in English. Do NOT translate or mix languages.
+
+I want you to generate a Graphviz DOT file that visually represents a hierarchical summary of a topic. The input is a structured summary written in the following indentation style:
 
 Main Topic:
 - Subtopic
 -- Sub-subtopic
 --- Detail
+
 Your output should follow these formatting and structural guidelines:
+
+LANGUAGE RULE: All node labels must match the language of the input summary exactly.
 
 Use the DOT language syntax
 Output valid Graphviz DOT code that can be rendered using tools like dot, xdot, or online Graphviz editors.
@@ -192,13 +197,13 @@ Each item from the hierarchy should be represented as a separate node. Use shape
 
 Node naming convention:
 - Use simple identifiers like: AI, ML, SupervisedLearning, etc.
-- Put the actual text in the label attribute
+- Put the actual text in the label attribute (in the same language as the summary)
 - Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", color=lightblue];
 
 Edges
 Connect nodes based on their parent-child relationships using simple node identifiers.
 
-Example of correct syntax with color grouping:
+Example of correct syntax with color grouping (NOTE: This example uses English labels, but you must use the language of your input):
 digraph TopicSummary {{
     rankdir=LR;
     node [shape=box, style=filled];
@@ -223,6 +228,7 @@ digraph TopicSummary {{
 
 Goal:
 Produce a clean, valid DOT file with proper syntax that accurately reflects the logical structure of the input summary, with nodes visually grouped by color based on their parent relationships.
+REMEMBER: Write ALL node labels in the SAME LANGUAGE as the input summary.
 
 Hierarchical summary: {summary}
 
