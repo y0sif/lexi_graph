@@ -7,6 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
     "graphviz>=0.21",
-    "langchain-openai>=0.3.28",
+    "langchain-anthropic>=0.3.18",
     "streamlit>=1.47.0",
 ]

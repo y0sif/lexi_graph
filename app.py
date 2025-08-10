@@ -26,7 +26,7 @@ PROGRESS_MESSAGES = {
 # Error messages
 ERROR_MESSAGES = {
     "invalid_content": "❌ Content validation failed - Please provide educational content",
-    "connection": "❌ Connection error - Check your OpenRouter API key",
+    "connection": "❌ Connection error - Check your Anthropic API key",
     "analysis": "❌ Failed to analyze content - Please check your text",
     "generation": "❌ Failed to generate diagram - Please try again",
     "rendering": "❌ Failed to render graph - Please contact support"
@@ -113,39 +113,42 @@ def main():
     st.markdown('<div class="main-header">🔗 LexiGraph</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Transform lectures into visual knowledge graphs</div>', unsafe_allow_html=True)
     
-    # API Key Section
-    st.markdown("### 🔑 OpenRouter API Configuration")
+    # API Key Section - COMMENTED OUT FOR NOW (using .env file)
+    # st.markdown("### 🔑 Anthropic API Configuration")
     
-    api_key_col1, api_key_col2 = st.columns([3, 1])
-    
-    with api_key_col1:
-        api_key = st.text_input(
-            "Enter your OpenRouter API Key:",
-            type="password",
-            value=st.session_state.api_key,
-            placeholder="sk-or-v1-...",
-            help="Get your free API key from https://openrouter.ai/keys",
-            key="api_key_input"
-        )
-    
-    with api_key_col2:
-        st.markdown("##### 🔗 Get API Key")
-        st.markdown("[OpenRouter Keys](https://openrouter.ai/keys)")
+    # # API Key input in main area with better styling
+    # with st.container():
+    #     api_key = st.text_input(
+    #         "Enter your Anthropic API Key:",
+    #         type="password",
+    #         value=st.session_state.api_key,
+    #         placeholder="sk-ant-...",
+    #         help="Get your API key from https://console.anthropic.com/",
+    #         key="api_input",
+    #         on_change=lambda: setattr(st.session_state, 'api_key', st.session_state.api_input)
+    #     )
         
-        if st.button("🗑️ Clear Key", use_container_width=True):
-            st.session_state.api_key = ""
-            st.rerun()
+    #     st.markdown("[Anthropic Console](https://console.anthropic.com/)")
+        
+    #     if st.button("🗑️ Clear Key", use_container_width=True):
+    #         st.session_state.api_key = ""
+    #         st.rerun()
+    
+    # For now, using API key from .env file only
+    api_key = None  # Will use environment variable
     
     # Update session state
     st.session_state.api_key = api_key
     
-    # Show API key status
-    if api_key and api_key.startswith("sk-or-v1-"):
-        st.success("✅ API key configured successfully!")
-    elif api_key:
-        st.warning("⚠️ API key should start with 'sk-or-v1-'")
-    else:
-        st.info("ℹ️ Please enter your OpenRouter API key to use the service.")
+    # API key status - commented out since we're using .env
+    # if api_key and api_key.startswith("sk-ant-"):
+    #     st.success("✅ API key configured successfully!")
+    # elif api_key:
+    #     st.warning("⚠️ API key should start with 'sk-ant-'")
+    # else:
+    #     st.info("ℹ️ Using API key from environment file (.env)")
+    
+    st.info("ℹ️ Using Anthropic API key from environment file (.env)")
     
     st.markdown("---")
     
@@ -181,16 +184,11 @@ def main():
     
     # Input validation (only check validity, don't show warning)
     is_valid, error_message = validate_input_text(lecture_text)
-    has_api_key = bool(api_key and api_key.startswith("sk-or-v1-"))
-    generate_disabled = not is_valid or not has_api_key
+    generate_disabled = not is_valid  # Only check text validity now
     
     # Generate button with dynamic text based on input state
     button_text = "🚀 Generate Knowledge Graph"
-    if not api_key:
-        button_text = "🔑 Enter OpenRouter API key to continue"
-    elif not api_key.startswith("sk-or-v1-"):
-        button_text = "🔑 Please enter a valid OpenRouter API key"
-    elif not lecture_text or not lecture_text.strip():
+    if not lecture_text or not lecture_text.strip():
         button_text = "✏️ Enter lecture content to generate graph"
     elif len(lecture_text.strip()) < 50:
         button_text = f"📝 Need at least {50 - len(lecture_text.strip())} more characters"
@@ -202,11 +200,7 @@ def main():
         disabled=generate_disabled,
         use_container_width=True
     ):
-        # Double-check validation when button is clicked
-        if not has_api_key:
-            st.error("**API Key Required:** Please enter your OpenRouter API key to use the service.")
-            return
-            
+        # Double-check validation when button is clicked            
         if not is_valid:
             st.error(f"**Input Error:** {error_message}")
             return
@@ -222,7 +216,7 @@ def main():
                 time.sleep(0.5)  # Small delay for visual feedback
                 
                 # Step 2: Processing pipeline
-                summary, dot_code = pipeline(lecture_text, progress_callback, api_key)
+                summary, dot_code = pipeline(lecture_text, progress_callback)
                 
                 # Check if validation failed or processing failed
                 if dot_code is None:
@@ -238,7 +232,7 @@ def main():
                                "- Informational articles with learning value")
                     elif "Connection refused" in summary or "API" in summary:
                         st.error(ERROR_MESSAGES["connection"])
-                        st.info("💡 **Quick Fix:** Check your OpenRouter API key in your .env file")
+                        st.info("💡 **Quick Fix:** Check your Anthropic API key in your .env file")
                     else:
                         st.error(f"**Processing Error:** {summary}")
                     return
@@ -332,15 +326,21 @@ def main():
         
         st.markdown("### 🛠️ Requirements")
         st.markdown("""
-        - **OpenRouter API** key required (enter above)
-        - **Model:** google/gemma-3n-e4b-it:free
+        - **Anthropic API** key configured in .env file
+        - **Model:** claude-3-5-haiku-20241022
         - **Internet connection** for API access
         
         **Getting Started:**
-        1. Get free API key from [OpenRouter](https://openrouter.ai/keys)
-        2. Enter your API key above  
-        3. Paste educational content
-        4. Generate your knowledge graph!
+        1. Ensure your Anthropic API key is in the .env file
+        2. Paste educational content below
+        3. Generate your knowledge graph!
+        """)
+        
+        st.markdown("### 🔧 Configuration")
+        st.markdown("""
+        **API Key Setup:**
+        - Add `ANTHROPIC_API_KEY=your_key_here` to your .env file
+        - Get your API key from [Anthropic Console](https://console.anthropic.com/)
         """)
         
         st.markdown("### 🤖 AI Agents")

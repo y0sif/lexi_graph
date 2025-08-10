@@ -1,6 +1,6 @@
 """
 Core pipeline functions for LexiGraph
-Handles multi-agent LLM processing and knowledge graph generation via OpenRouter
+Handles multi-agent LLM processing and knowledge graph generation via Anthropic
 Uses specialized agents for different tasks:
 - Summarization Agent: Optimized for content analysis
 - Visualization Agent: Optimized for graph generation
@@ -8,39 +8,36 @@ Uses specialized agents for different tasks:
 
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 from .utils import clean_dot_code
 
 load_dotenv()
 
-def create_summarization_agent(api_key=None):
+def create_summarization_agent():
     """Create and configure the LLM instance specialized for summarization"""
-    return ChatOpenAI(
-        model="google/gemma-3-27b-it:free",
+    return ChatAnthropic(
+        model="claude-3-5-haiku-20241022",
         temperature=0.1,  
-        api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
-        max_tokens=12000,  
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        max_tokens=4000,  
     )
 
-def create_visualization_agent(api_key=None):
+def create_visualization_agent():
     """Create and configure the LLM instance specialized for DOT code generation"""
-    return ChatOpenAI(
-        model="google/gemma-3-27b-it:free",
+    return ChatAnthropic(
+        model="claude-3-5-haiku-20241022",
         temperature=0.1,  
-        api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
-        max_tokens=6000, 
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        max_tokens=4000, 
     )
 
-def create_validation_agent(api_key=None):
+def create_validation_agent():
     """Create and configure the LLM instance specialized for content validation"""
-    return ChatOpenAI(
-        model="google/gemma-3n-e4b-it:free",
+    return ChatAnthropic(
+        model="claude-3-5-haiku-20241022",
         temperature=0.1,  
-        api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         max_tokens=1000,  # Small token limit for efficiency
     )
 
@@ -57,24 +54,24 @@ def get_agent_info():
             "temperature": 0.1,
             "max_tokens": 1000,
             "optimization": "Fast and reliable content validation",
-            "provider": "OpenRouter",
-            "model": "google/gemma-3n-e4b-it:free"
+            "provider": "Anthropic",
+            "model": "claude-3-5-haiku-20241022"
         },
         "summarization_agent": {
             "purpose": "Content analysis and structured summarization",
             "temperature": 0.1,
             "max_tokens": 4000,
             "optimization": "Consistent, hierarchical output",
-            "provider": "OpenRouter",
-            "model": "google/gemma-3n-e4b-it:free"
+            "provider": "Anthropic",
+            "model": "claude-3-5-haiku-20241022"
         },
         "visualization_agent": {
             "purpose": "DOT code generation and graph syntax",
             "temperature": 0.1,
-            "max_tokens": 6000,
+            "max_tokens": 4000,
             "optimization": "Precise syntax, complex structures",
-            "provider": "OpenRouter", 
-            "model": "google/gemma-3n-e4b-it:free"
+            "provider": "Anthropic", 
+            "model": "claude-3-5-haiku-20241022"
         }
     }
 
@@ -236,7 +233,7 @@ Return ONLY the DOT code without any explanations, additional text, or any ` use
     
     return validation_prompt, summarizer_prompt, dot_prompt
 
-def pipeline(input_text: str, progress_callback=None, api_key=None):
+def pipeline(input_text: str, progress_callback=None):
     """
     Multi-agent pipeline function that processes lecture text into knowledge graph
     Uses specialized agents for different tasks:
@@ -247,16 +244,15 @@ def pipeline(input_text: str, progress_callback=None, api_key=None):
     Args:
         input_text (str): The content to process
         progress_callback (callable): Optional callback function for progress updates
-        api_key (str): Optional OpenRouter API key, uses env variable if not provided
     
     Returns:
         tuple: (summary, dot_code) or (error_message, None) on failure
     """
     try:
-        # Create specialized agents with user's API key
-        validation_agent = create_validation_agent(api_key)
-        summarization_agent = create_summarization_agent(api_key)
-        visualization_agent = create_visualization_agent(api_key)
+        # Create specialized agents using environment variable
+        validation_agent = create_validation_agent()
+        summarization_agent = create_summarization_agent()
+        visualization_agent = create_visualization_agent()
         
         # Get prompts
         validation_prompt, summarizer_prompt, dot_prompt = create_prompts()
