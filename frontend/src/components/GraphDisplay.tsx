@@ -16,7 +16,7 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
 
   if (!graphPath) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-black">
         No graph generated yet.
       </div>
     )
@@ -53,7 +53,7 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">Generated Graph</h3>
+        <h3 className="text-lg font-medium text-black">Generated Graph</h3>
         <div className="flex space-x-2">
           <button
             onClick={() => setShowPreview(!showPreview)}
@@ -84,7 +84,7 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
       {showPreview && (
         <div className="border border-gray-200 rounded-md overflow-hidden">
           {imageError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <div className="flex flex-col items-center justify-center py-12 text-black">
               <p className="mb-2">Unable to display image preview</p>
               <p className="text-sm">File: {graphPath}</p>
               <p className="text-sm mb-4">You can still download the file using the button above</p>
@@ -117,7 +117,7 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
         </div>
       )}
 
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-black">
         <p>Graph file: <code className="bg-gray-100 px-1 py-0.5 rounded">{graphPath}</code></p>
       </div>
     </div>

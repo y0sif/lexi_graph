@@ -55,10 +55,10 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
   if (!provider) {
     return (
       <div className="relative">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-black mb-1">
           Model
         </label>
-        <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+        <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black">
           Select a provider first
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
 
   return (
     <div className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-black mb-1">
         Model
       </label>
       <div className="relative">
@@ -75,11 +75,11 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           disabled={loading || models.length === 0}
-          className={`w-full px-3 py-2 text-left border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 ${
+          className={`w-full px-3 py-2 text-left border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 text-black ${
             error ? 'border-red-300' : 'border-gray-300'
           }`}
         >
-          <span className="block truncate">
+          <span className="block truncate text-black">
             {loading 
               ? 'Loading models...' 
               : selectedModel 
@@ -105,7 +105,7 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
                   setIsOpen(false)
                 }}
                 className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                  value === model.id ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                  value === model.id ? 'bg-blue-50 text-blue-600' : 'text-black'
                 }`}
               >
                 {model.name}

@@ -9,7 +9,7 @@ interface TextInputProps {
 export default function TextInput({ value, onChange, error }: TextInputProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
+      <label className="block text-sm font-semibold text-black mb-2">
         📝 Lecture Text
       </label>
       <div className="relative">
@@ -17,7 +17,7 @@ export default function TextInput({ value, onChange, error }: TextInputProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={10}
-          className={`w-full px-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white resize-none ${
+          className={`w-full px-4 py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white resize-none text-black ${
             error ? 'border-red-300 bg-red-50' : 'border-gray-300'
           }`}
           placeholder="Paste your lecture text here... 

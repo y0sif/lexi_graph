@@ -17,7 +17,7 @@ export default function Home() {
                 LexiGraph
               </h1>
             </div>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-black max-w-2xl mx-auto">
               Transform lecture content into beautiful, interactive knowledge graphs using advanced AI
             </p>
           </div>
@@ -31,7 +31,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200/50 bg-white/50 backdrop-blur-sm mt-16">
-        <div className="container mx-auto px-4 py-6 text-center text-gray-500">
+        <div className="container mx-auto px-4 py-6 text-center text-black">
           <p className="text-sm">Powered by AI • Built with ❤️</p>
         </div>
       </footer>

@@ -126,13 +126,13 @@ export default function LexiGraphInterface() {
             />
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-black mb-2">
                 API Key
               </label>
               <input
                 type="password"
                 {...register('apiKey')}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-black"
                 placeholder="Enter your API key"
               />
               {errors.apiKey && (
@@ -213,11 +213,11 @@ export default function LexiGraphInterface() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-6 w-6 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-lg font-semibold text-red-800 mb-2">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">
                       {result.message}
                     </h3>
                     {result.error && (
-                      <div className="text-red-700 bg-red-100 rounded-lg p-3">
+                      <div className="text-red-800 bg-red-100 rounded-lg p-3">
                         <p className="font-mono text-sm">{result.error}</p>
                       </div>
                     )}
