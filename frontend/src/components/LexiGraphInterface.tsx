@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -43,6 +43,7 @@ interface ProcessResponse {
 export default function LexiGraphInterface() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [result, setResult] = useState<ProcessResponse | null>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const {
     register,
@@ -61,6 +62,19 @@ export default function LexiGraphInterface() {
   })
 
   const selectedProvider = watch('provider')
+
+  // Scroll to results when a successful graph is generated
+  useEffect(() => {
+    if (result && result.success && resultsRef.current) {
+      // Small delay to ensure the results section is fully rendered
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        })
+      }, 100)
+    }
+  }, [result])
 
   const loadExample = useCallback(() => {
     setValue('text', EXAMPLE_LECTURE)
@@ -186,7 +200,7 @@ export default function LexiGraphInterface() {
 
       {/* Results */}
       {result && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+        <div ref={resultsRef} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
           <div className={`px-8 py-6 ${result.success ? 'bg-gradient-to-r from-green-600 to-emerald-600' : 'bg-gradient-to-r from-red-600 to-rose-600'}`}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
