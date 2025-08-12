@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import axios from 'axios'
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle, BookOpen } from 'lucide-react'
 
 import ProviderSelector from './ProviderSelector'
 import ModelSelector from './ModelSelector'
@@ -13,6 +13,16 @@ import TextInput from './TextInput'
 import GraphDisplay from './GraphDisplay'
 
 const API_BASE_URL = 'http://localhost:8000'
+
+const EXAMPLE_LECTURE = `Welcome to this short lecture on Artificial Intelligence. Let's start with the basics. Artificial Intelligence, or AI, refers to the capability of machines to perform tasks that typically require human intelligence—things like understanding language, recognizing images, or making decisions. Within AI, one of the most important and widely used branches is Machine Learning, or ML. Machine Learning is all about teaching computers to learn from data. Instead of programming every rule manually, we feed the machine examples, and it learns patterns or rules from that data on its own.
+
+Machine learning comes in several types. The first is supervised learning, where we train the model using labeled data—that means we give it both the input and the correct output. For example, if we want to train a model to detect spam emails, we show it lots of examples of emails labeled as "spam" or "not spam," and the model learns to predict that label. The second type is unsupervised learning, where the data has no labels at all. The algorithm's job is to find hidden patterns or groupings. A good example here would be clustering customers based on their shopping behavior—without knowing their categories beforehand. Then we have semi-supervised learning, which is a mix of both: it uses a small amount of labeled data and a larger amount of unlabeled data to improve learning accuracy.
+
+Another major category is reinforcement learning. Here, the model—or we call it an agent—learns by interacting with an environment and receiving feedback in the form of rewards or penalties. A classic example is training a robot to walk or teaching an AI to play games like chess or Go. It tries actions, sees the result, and adjusts its behavior over time to maximize rewards.
+
+Now, within machine learning, there's a very powerful subfield called deep learning. Deep learning uses neural networks with many layers, and it has completely transformed what we can do with AI. These deep neural networks are excellent at automatically learning complex features from data, especially in areas like image recognition, speech processing, and natural language understanding. Deep learning is what powers technologies like self-driving cars, facial recognition, and even language models like ChatGPT.
+
+To summarize: AI is the broad field. Machine learning is a subset that lets computers learn from data. And deep learning is a further subset that uses multi-layered neural networks to learn high-level patterns. Each type of learning—supervised, unsupervised, semi-supervised, and reinforcement—has its strengths depending on the problem you're trying to solve. And understanding which one to use is a big part of becoming proficient in AI.`
 
 const formSchema = z.object({
   text: z.string().min(50, 'Text must be at least 50 characters long'),
@@ -51,6 +61,10 @@ export default function LexiGraphInterface() {
   })
 
   const selectedProvider = watch('provider')
+
+  const loadExample = useCallback(() => {
+    setValue('text', EXAMPLE_LECTURE)
+  }, [setValue])
 
   const onSubmit = useCallback(async (data: FormData) => {
     setIsProcessing(true)
@@ -136,6 +150,18 @@ export default function LexiGraphInterface() {
             onChange={(value: string) => setValue('text', value)}
             error={errors.text?.message}
           />
+
+          {/* Try Example Button */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={loadExample}
+              className="inline-flex items-center px-6 py-3 border border-blue-300 text-base font-medium rounded-xl text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              <BookOpen className="w-5 h-5 mr-2" />
+              Try Example Lecture
+            </button>
+          </div>
 
           {/* Submit Button */}
           <button

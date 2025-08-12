@@ -12,6 +12,7 @@ interface GraphDisplayProps {
 export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
   const [imageError, setImageError] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
+  const [downloadError, setDownloadError] = useState('')
 
   if (!graphPath) {
     return (
@@ -21,16 +22,32 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
     )
   }
 
+  // Separate URLs for image display and download
+  const imageUrl = `${API_BASE_URL}/image/${graphPath}`
   const downloadUrl = `${API_BASE_URL}/download/${graphPath}`
-  const imageUrl = downloadUrl // Same URL for display and download
 
-  const handleDownload = () => {
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = graphPath
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownload = async () => {
+    try {
+      setDownloadError('')
+      const response = await fetch(downloadUrl)
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`)
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = graphPath
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download error:', error)
+      setDownloadError(error instanceof Error ? error.message : 'Download failed')
+    }
   }
 
   return (
@@ -69,7 +86,18 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
           {imageError ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
               <p className="mb-2">Unable to display image preview</p>
-              <p className="text-sm">You can still download the file using the button above</p>
+              <p className="text-sm">File: {graphPath}</p>
+              <p className="text-sm mb-4">You can still download the file using the button above</p>
+              <button
+                onClick={() => {
+                  setImageError(false)
+                  const img = document.querySelector(`img[src="${imageUrl}"]`) as HTMLImageElement
+                  if (img) img.src = imageUrl + '?t=' + Date.now() // Force reload
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm underline"
+              >
+                Try loading image again
+              </button>
             </div>
           ) : (
             <img
@@ -80,6 +108,12 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
               onLoad={() => setImageError(false)}
             />
           )}
+        </div>
+      )}
+
+      {downloadError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">Download error: {downloadError}</p>
         </div>
       )}
 

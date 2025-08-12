@@ -74,10 +74,17 @@ def process_lecture(text: str, provider: str, model: str, api_key: str):
         if dot_code and "digraph" in dot_code:
             # Generate unique filename and compile to PNG
             filename = generate_unique_filename()
-            success = compile_dot_to_png(dot_code, filename, "../output")
             
-            if success:
-                graph_path = f"graph_{filename}.png"
+            # Ensure output directory exists
+            output_dir = Path("../output")
+            output_dir.mkdir(exist_ok=True)
+            print(f"Output directory: {output_dir.absolute()}")
+            
+            result_path = compile_dot_to_png(dot_code, filename, str(output_dir))
+            
+            if result_path:
+                graph_path = f"{filename}.png"
+                print(f"Generated graph: {graph_path}")
                 return {
                     "success": True,
                     "graph_path": graph_path,
@@ -201,6 +208,35 @@ async def process_text(input_data: TextInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/image/{filename}")
+async def serve_image(filename: str):
+    """Serve image file for display in the frontend"""
+    try:
+        # Look for the file in the output directory
+        output_dir = Path("../output")
+        file_path = output_dir / filename
+        
+        print(f"Looking for image file: {file_path}")
+        print(f"File exists: {file_path.exists()}")
+        
+        if not file_path.exists():
+            # List available files for debugging
+            if output_dir.exists():
+                files = list(output_dir.glob("*.png"))
+                print(f"Available files: {files}")
+            else:
+                print(f"Output directory {output_dir} does not exist")
+            raise HTTPException(status_code=404, detail="Image file not found")
+        
+        return FileResponse(
+            path=str(file_path),
+            media_type='image/png'
+        )
+        
+    except Exception as e:
+        print(f"Error serving image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/download/{filename}")
 async def download_graph(filename: str):
     """Download generated graph file"""
@@ -215,7 +251,8 @@ async def download_graph(filename: str):
         return FileResponse(
             path=str(file_path),
             filename=filename,
-            media_type='image/png'
+            media_type='image/png',
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
         
     except Exception as e:
