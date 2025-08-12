@@ -3,12 +3,11 @@ FastAPI backend for LexiGraph
 Provides REST API for text-to-graph processing
 """
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import tempfile
 import os
 import asyncio
 from pathlib import Path
@@ -199,55 +198,6 @@ async def process_text(input_data: TextInput):
                 error=result.get("error")
             )
             
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/process/file", response_model=ProcessResponse)
-async def process_file(
-    file: UploadFile = File(...),
-    provider: str = Form(default="anthropic"),
-    model: str = Form(default="claude-3-5-haiku-20241022"),
-    api_key: str = Form(...)
-):
-    """Process uploaded text file and generate concept graph"""
-    try:
-        # Validate file type
-        if not file.filename.endswith(('.txt', '.md')):
-            raise HTTPException(
-                status_code=400, 
-                detail="Only .txt and .md files are supported"
-            )
-        
-        # Read file content
-        content = await file.read()
-        text = content.decode('utf-8')
-        
-        # Process the text
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None, 
-            process_lecture, 
-            text, 
-            provider,
-            model,
-            api_key
-        )
-        
-        if result["success"]:
-            return ProcessResponse(
-                success=True,
-                message="Graph generated successfully",
-                graph_path=result.get("graph_path")
-            )
-        else:
-            return ProcessResponse(
-                success=False,
-                message="Failed to generate graph",
-                error=result.get("error")
-            )
-            
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
