@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Eye, EyeOff } from 'lucide-react'
+import { Download, Maximize2, X } from 'lucide-react'
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -11,7 +11,7 @@ interface GraphDisplayProps {
 
 export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
   const [imageError, setImageError] = useState(false)
-  const [showPreview, setShowPreview] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [downloadError, setDownloadError] = useState('')
 
   if (!graphPath) {
@@ -56,20 +56,11 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
         <h3 className="text-lg font-medium text-black">Generated Graph</h3>
         <div className="flex space-x-2">
           <button
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={() => setIsFullscreen(true)}
             className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            {showPreview ? (
-              <>
-                <EyeOff className="h-4 w-4 mr-2" />
-                Hide Preview
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                Show Preview
-              </>
-            )}
+            <Maximize2 className="h-4 w-4 mr-2" />
+            Zoom
           </button>
           <button
             onClick={handleDownload}
@@ -81,33 +72,53 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
         </div>
       </div>
 
-      {showPreview && (
-        <div className="border border-gray-200 rounded-md overflow-hidden">
-          {imageError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-black">
-              <p className="mb-2">Unable to display image preview</p>
-              <p className="text-sm">File: {graphPath}</p>
-              <p className="text-sm mb-4">You can still download the file using the button above</p>
-              <button
-                onClick={() => {
-                  setImageError(false)
-                  const img = document.querySelector(`img[src="${imageUrl}"]`) as HTMLImageElement
-                  if (img) img.src = imageUrl + '?t=' + Date.now() // Force reload
-                }}
-                className="text-blue-600 hover:text-blue-800 text-sm underline"
-              >
-                Try loading image again
-              </button>
-            </div>
-          ) : (
+      {/* Image Preview */}
+      <div className="border border-gray-200 rounded-md overflow-hidden">
+        {imageError ? (
+          <div className="flex flex-col items-center justify-center py-12 text-black">
+            <p className="mb-2">Unable to display image preview</p>
+            <p className="text-sm">File: {graphPath}</p>
+            <p className="text-sm mb-4">You can still download the file using the button above</p>
+            <button
+              onClick={() => {
+                setImageError(false)
+                const img = document.querySelector(`img[src="${imageUrl}"]`) as HTMLImageElement
+                if (img) img.src = imageUrl + '?t=' + Date.now() // Force reload
+              }}
+              className="text-blue-600 hover:text-blue-800 text-sm underline"
+            >
+              Try loading image again
+            </button>
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt="Generated concept graph"
+            className="w-full h-auto max-h-96 object-contain bg-white cursor-pointer"
+            onError={() => setImageError(true)}
+            onLoad={() => setImageError(false)}
+            onClick={() => setIsFullscreen(true)}
+          />
+        )}
+      </div>
+
+      {/* Fullscreen Modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-full max-h-full">
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-70 transition-all"
+            >
+              <X className="h-6 w-6" />
+            </button>
             <img
               src={imageUrl}
-              alt="Generated concept graph"
-              className="w-full h-auto max-h-96 object-contain bg-white"
-              onError={() => setImageError(true)}
-              onLoad={() => setImageError(false)}
+              alt="Generated concept graph - Fullscreen"
+              className="max-w-full max-h-full object-contain"
+              onClick={() => setIsFullscreen(false)}
             />
-          )}
+          </div>
         </div>
       )}
 
@@ -116,10 +127,6 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
           <p className="text-sm text-red-600">Download error: {downloadError}</p>
         </div>
       )}
-
-      <div className="text-sm text-black">
-        <p>Graph file: <code className="bg-gray-100 px-1 py-0.5 rounded">{graphPath}</code></p>
-      </div>
     </div>
   )
 }
