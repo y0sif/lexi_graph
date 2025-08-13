@@ -1,18 +1,46 @@
 'use client'
 
-import { useState } from 'react'
-import { Download, Maximize2, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { Download, Maximize2, X, ChevronDown, ChevronRight } from 'lucide-react'
 
 const API_BASE_URL = 'http://localhost:8000'
 
 interface GraphDisplayProps {
   graphPath?: string
+  summary?: string
 }
 
-export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
+export default function GraphDisplay({ graphPath, summary }: GraphDisplayProps) {
   const [imageError, setImageError] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
   const [downloadError, setDownloadError] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Handle escape key to close fullscreen
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false)
+      }
+    }
+
+    if (isFullscreen) {
+      document.addEventListener('keydown', handleEscape)
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isFullscreen])
 
   if (!graphPath) {
     return (
@@ -103,14 +131,14 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
       </div>
 
       {/* Fullscreen Modal */}
-      {isFullscreen && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-full max-h-full">
+      {isFullscreen && mounted && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-95 z-[9999] flex items-center justify-center">
+          <div className="relative w-[90vw] h-[90vh] flex items-center justify-center">
             <button
               onClick={() => setIsFullscreen(false)}
-              className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-70 transition-all"
+              className="absolute top-6 right-6 z-10 p-3 bg-white bg-opacity-20 text-white rounded-full hover:bg-opacity-30 transition-all backdrop-blur-sm"
             >
-              <X className="h-6 w-6" />
+              <X className="h-8 w-8" />
             </button>
             <img
               src={imageUrl}
@@ -119,12 +147,50 @@ export default function GraphDisplay({ graphPath }: GraphDisplayProps) {
               onClick={() => setIsFullscreen(false)}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {downloadError && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">Download error: {downloadError}</p>
+        </div>
+      )}
+
+      {/* Summary Section */}
+      {summary && (
+        <div className="border-t border-gray-200 pt-4">
+          <button
+            onClick={() => setShowSummary(!showSummary)}
+            className="flex items-center justify-between w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                📄
+              </div>
+              <div className="text-left">
+                <h3 className="text-lg font-medium text-black">Generated Summary</h3>
+                <p className="text-sm text-gray-600">AI-generated summary of your content</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              {showSummary ? (
+                <ChevronDown className="h-5 w-5 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-gray-500" />
+              )}
+            </div>
+          </button>
+          
+          {showSummary && (
+            <div className="mt-4 p-6 bg-white border border-gray-200 rounded-lg">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-black leading-relaxed whitespace-pre-wrap">
+                  {summary}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -132,6 +132,7 @@ class ProcessResponse(BaseModel):
     success: bool
     message: str
     graph_path: Optional[str] = None
+    summary: Optional[str] = None
     error: Optional[str] = None
 
 @app.get("/")
@@ -196,7 +197,8 @@ async def process_text(input_data: TextInput):
             return ProcessResponse(
                 success=True,
                 message="Graph generated successfully",
-                graph_path=result.get("graph_path")
+                graph_path=result.get("graph_path"),
+                summary=result.get("summary")
             )
         else:
             return ProcessResponse(

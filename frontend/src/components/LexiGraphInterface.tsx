@@ -37,6 +37,7 @@ interface ProcessResponse {
   success: boolean
   message: string
   graph_path?: string
+  summary?: string
   error?: string
 }
 
@@ -221,7 +222,10 @@ export default function LexiGraphInterface() {
 
           <div className="p-8">
             {result.success ? (
-              <GraphDisplay graphPath={result.graph_path} />
+              <GraphDisplay 
+                graphPath={result.graph_path} 
+                summary={result.summary}
+              />
             ) : (
               <div className="bg-red-50 border border-red-200 rounded-xl p-6">
                 <div className="flex items-start gap-3">
