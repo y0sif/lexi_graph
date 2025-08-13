@@ -78,14 +78,21 @@ def validate_dot_syntax(dot_code: str) -> tuple[bool, str]:
     """
     try:
         # Try to create a graphviz Source object
-        graphviz.Source(dot_code)
+        source = graphviz.Source(dot_code)
+        # Try to render to check for additional syntax errors
+        source.pipe(format='png', quiet=True)
         return True, ""
     except Exception as e:
-        return False, str(e)
+        error_details = f"DOT syntax validation failed: {str(e)}"
+        print(f"❌ {error_details}")
+        print(f"📝 DOT code being validated:\n{'-'*50}")
+        print(dot_code)
+        print(f"{'-'*50}")
+        return False, error_details
 
 def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "output"):
     """
-    Compile DOT code into a PNG image file
+    Compile DOT code into a PNG image file with detailed error reporting
     
     Args:
         dot_code (str): The DOT language code
@@ -96,28 +103,89 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         str: Path to the generated PNG file or None on failure
     """
     try:
-        # Clean the DOT code first
-        cleaned_dot = clean_dot_code(dot_code)
+        print(f"🔧 Starting DOT compilation for file: {output_filename}")
+        print(f"📁 Output directory: {output_dir}")
         
-        # Validate the cleaned DOT code
-        is_valid, error_msg = validate_dot_syntax(cleaned_dot)
-        if not is_valid:
-            print(f"Invalid DOT syntax: {error_msg}")
-            print(f"Cleaned DOT code:\n{cleaned_dot}")
+        # Clean the DOT code first
+        print("🧹 Cleaning DOT code...")
+        original_length = len(dot_code)
+        cleaned_dot = clean_dot_code(dot_code)
+        cleaned_length = len(cleaned_dot)
+        
+        print(f"📏 Original code length: {original_length} characters")
+        print(f"📏 Cleaned code length: {cleaned_length} characters")
+        
+        if not cleaned_dot.strip():
+            error_msg = "❌ DOT code is empty after cleaning"
+            print(error_msg)
+            print(f"📝 Original DOT code:\n{'-'*50}")
+            print(dot_code)
+            print(f"{'-'*50}")
             return None
         
+        # Show the cleaned DOT code for debugging
+        print(f"📝 Cleaned DOT code:\n{'-'*50}")
+        print(cleaned_dot)
+        print(f"{'-'*50}")
+        
+        # Validate the cleaned DOT code
+        print("🔍 Validating DOT syntax...")
+        is_valid, error_msg = validate_dot_syntax(cleaned_dot)
+        if not is_valid:
+            print(f"❌ Validation failed: {error_msg}")
+            return None
+        
+        print("✅ DOT syntax validation passed")
+        
         # Ensure output directory exists
+        print(f"📂 Ensuring output directory exists: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
         
         # Generate the graph
+        print("🎨 Generating PNG from DOT code...")
         graph = graphviz.Source(cleaned_dot, format='png')
+        
+        # Get the absolute path for debugging
+        abs_output_dir = os.path.abspath(output_dir)
+        print(f"📍 Absolute output directory: {abs_output_dir}")
+        
+        # Render the graph
         temp_path = graph.render(filename=output_filename, cleanup=True)
+        print(f"🔨 Rendered to temporary file: {temp_path}")
         
         # Move to output directory
         final_path = os.path.join(output_dir, f"{output_filename}.png")
-        shutil.move(temp_path, final_path)
+        print(f"📋 Moving to final destination: {final_path}")
         
-        print(f"Graph saved as {final_path}")
+        if os.path.exists(temp_path):
+            shutil.move(temp_path, final_path)
+            print(f"✅ Graph successfully saved as {final_path}")
+            
+            # Verify the file was created and get its size
+            if os.path.exists(final_path):
+                file_size = os.path.getsize(final_path)
+                print(f"📊 Final file size: {file_size} bytes")
+                return final_path
+            else:
+                print(f"❌ Final file not found at {final_path}")
+                return None
+        else:
+            print(f"❌ Temporary file not found at {temp_path}")
+            return None
+        
+    except Exception as e:
+        error_msg = f"❌ DOT compilation failed: {str(e)}"
+        print(error_msg)
+        print(f"📝 DOT code that failed:\n{'-'*50}")
+        print(dot_code)
+        print(f"{'-'*50}")
+        
+        # Print detailed exception information
+        import traceback
+        print(f"🔍 Full error traceback:")
+        traceback.print_exc()
+        
+        return None
         return final_path
         
     except Exception as e:

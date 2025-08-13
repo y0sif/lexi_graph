@@ -33,7 +33,7 @@ def process_lecture(text: str, provider: str, model: str, api_key: str):
         if not api_key or not api_key.strip():
             return {
                 "success": False,
-                "error": f"API key is required for {provider}"
+                "error": f"API key is required for {provider}. Please enter your {provider} API key."
             }
         
         # Validate API key format based on provider
@@ -65,46 +65,79 @@ def process_lecture(text: str, provider: str, model: str, api_key: str):
         else:
             return {
                 "success": False,
-                "error": f"Unsupported provider: {provider}"
+                "error": f"Provider '{provider}' is not supported. Please select Anthropic, OpenAI, or OpenRouter."
             }
         
         # Call the core pipeline
+        print(f"🚀 Starting pipeline with provider: {provider}, model: {model}")
         summary, dot_code = pipeline(text)
         
         if dot_code and "digraph" in dot_code:
+            print("✅ Pipeline generated valid DOT code")
             # Generate unique filename and compile to PNG
             filename = generate_unique_filename()
+            print(f"📝 Generated filename: {filename}")
             
             # Ensure output directory exists
             output_dir = Path("../output")
             output_dir.mkdir(exist_ok=True)
-            print(f"Output directory: {output_dir.absolute()}")
+            print(f"📁 Output directory: {output_dir.absolute()}")
             
+            print("🔧 Starting DOT to PNG compilation...")
             result_path = compile_dot_to_png(dot_code, filename, str(output_dir))
             
             if result_path:
                 graph_path = f"{filename}.png"
-                print(f"Generated graph: {graph_path}")
+                print(f"✅ Graph generation successful: {graph_path}")
                 return {
                     "success": True,
                     "graph_path": graph_path,
                     "summary": summary
                 }
             else:
+                error_msg = "Failed to generate the graph image. The AI model may have produced invalid graph code. Please try again with different content or a different model."
+                print(f"❌ Failed to compile DOT code to PNG - check console for detailed error messages")
                 return {
                     "success": False,
-                    "error": "Failed to compile DOT code to PNG"
+                    "error": error_msg
                 }
         else:
+            error_msg = f"Unable to generate a valid knowledge graph from the provided content. Please try with different text or select a different AI model."
+            print(f"❌ Pipeline failed to generate valid DOT code. Generated content: {str(dot_code)[:200]}...")
             return {
                 "success": False,
-                "error": "Failed to generate valid DOT code from text"
+                "error": error_msg
             }
             
     except Exception as e:
+        # Log detailed error for debugging
+        detailed_error = f"❌ Pipeline execution failed: {str(e)}"
+        print(detailed_error)
+        
+        # Print detailed exception information for debugging
+        import traceback
+        print(f"🔍 Full error traceback:")
+        traceback.print_exc()
+        
+        # Provide user-friendly error message
+        user_friendly_error = "An unexpected error occurred while processing your content. Please try again with different text or select a different AI model."
+        
+        # Handle specific common errors with better messages
+        error_str = str(e).lower()
+        if "rate limit" in error_str or "quota" in error_str:
+            user_friendly_error = "API rate limit reached. Please wait a moment and try again."
+        elif "api key" in error_str or "authentication" in error_str:
+            user_friendly_error = "Authentication failed. Please check your API key and try again."
+        elif "model" in error_str and "not found" in error_str:
+            user_friendly_error = "The selected AI model is not available. Please try a different model."
+        elif "timeout" in error_str:
+            user_friendly_error = "The request timed out. Please try again with shorter content."
+        elif "max_tokens" in error_str:
+            user_friendly_error = "The content is too long for the selected model. Please try shorter content or a different model."
+        
         return {
             "success": False,
-            "error": str(e)
+            "error": user_friendly_error
         }
 
 app = FastAPI(
