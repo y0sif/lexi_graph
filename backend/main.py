@@ -156,20 +156,49 @@ async def get_models(provider: str):
     """Get available models for a specific provider"""
     models = {
         "anthropic": [
-            {"id": "claude-3-5-haiku-20241022", "name": "Claude 3.5 Haiku"},
-            {"id": "claude-3-5-sonnet-20241022", "name": "Claude 3.5 Sonnet"},
-            {"id": "claude-3-opus-20240229", "name": "Claude 3 Opus"}
+            {"id": "claude-opus-4-1-20250805", "name": "Claude Opus 4.1"},
+            {"id": "claude-opus-4-20250514", "name": "Claude Opus 4"},
+            {"id": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4"},
+            {"id": "claude-3-7-sonnet-20250219", "name": "Claude Sonnet 3.7"},
+            {"id": "claude-3-5-haiku-20241022", "name": "Claude Haiku 3.5"}
         ],
         "openai": [
+            {"id": "gpt-5", "name": "GPT-5"},
+            {"id": "gpt-4.1", "name": "GPT-4.1"},
             {"id": "gpt-4o", "name": "GPT-4o"},
             {"id": "gpt-4o-mini", "name": "GPT-4o Mini"},
             {"id": "gpt-4-turbo", "name": "GPT-4 Turbo"}
         ],
         "openrouter": [
-            {"id": "anthropic/claude-3.5-haiku", "name": "Claude 3.5 Haiku (OpenRouter)"},
-            {"id": "anthropic/claude-3.5-sonnet", "name": "Claude 3.5 Sonnet (OpenRouter)"},
+            # Free models
+            {"id": "deepseek/deepseek-chat-v3-0324:free", "name": "DeepSeek Chat v3 (Free)"},
+            {"id": "deepseek/deepseek-r1-0528:free", "name": "DeepSeek R1 0528 (Free)"},
+            {"id": "qwen/qwen3-coder:free", "name": "Qwen 3 Coder (Free)"},
+            {"id": "deepseek/deepseek-r1:free", "name": "DeepSeek R1 (Free)"},
+            {"id": "moonshotai/kimi-k2:free", "name": "Kimi K2 (Free)"},
+            {"id": "qwen/qwen3-235b-a22b:free", "name": "Qwen 3 235B (Free)"},
+            {"id": "meta-llama/llama-3.3-70b-instruct:free", "name": "Llama 3.3 70B Instruct (Free)"},
+            {"id": "google/gemma-3n-e4b-it:free", "name": "Gemma 3N E4B IT (Free)"},
+            {"id": "mistralai/mistral-small-3.1-24b-instruct:free", "name": "Mistral Small 3.1 24B (Free)"},
+            {"id": "openai/gpt-oss-20b:free", "name": "GPT OSS 20B (Free)"},
+            {"id": "google/gemma-3n-e2b-it:free", "name": "Gemma 3N E2B IT (Free)"},
+            {"id": "meta-llama/llama-3.2-3b-instruct:free", "name": "Llama 3.2 3B Instruct (Free)"},
+            {"id": "qwen/qwen3-4b:free", "name": "Qwen 3 4B (Free)"},
+            {"id": "mistralai/mistral-7b-instruct:free", "name": "Mistral 7B Instruct (Free)"},
+            {"id": "google/gemma-2-9b-it:free", "name": "Gemma 2 9B IT (Free)"},
+            {"id": "google/gemma-3-27b-it:free", "name": "Gemma 3 27B IT (Free)"},
+            # Anthropic models via OpenRouter
+            {"id": "anthropic/claude-opus-4-1-20250805", "name": "Claude Opus 4.1 (OpenRouter)"},
+            {"id": "anthropic/claude-opus-4-20250514", "name": "Claude Opus 4 (OpenRouter)"},
+            {"id": "anthropic/claude-sonnet-4-20250514", "name": "Claude Sonnet 4 (OpenRouter)"},
+            {"id": "anthropic/claude-3-7-sonnet-20250219", "name": "Claude Sonnet 3.7 (OpenRouter)"},
+            {"id": "anthropic/claude-3-5-haiku-20241022", "name": "Claude Haiku 3.5 (OpenRouter)"},
+            # OpenAI models via OpenRouter
+            {"id": "openai/gpt-5", "name": "GPT-5 (OpenRouter)"},
+            {"id": "openai/gpt-4.1", "name": "GPT-4.1 (OpenRouter)"},
             {"id": "openai/gpt-4o", "name": "GPT-4o (OpenRouter)"},
-            {"id": "google/gemini-pro-1.5", "name": "Gemini Pro 1.5 (OpenRouter)"}
+            {"id": "openai/gpt-4o-mini", "name": "GPT-4o Mini (OpenRouter)"},
+            {"id": "openai/gpt-4-turbo", "name": "GPT-4 Turbo (OpenRouter)"}
         ]
     }
     

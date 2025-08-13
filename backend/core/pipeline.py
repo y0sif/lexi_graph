@@ -51,11 +51,11 @@ def get_llm_instance(model_name=None, temperature=0.1, max_tokens=4000):
 
 def create_summarization_agent():
     """Create and configure the LLM instance specialized for summarization"""
-    return get_llm_instance()
+    return get_llm_instance(max_tokens=12000)  # Higher token limit for detailed summaries
 
 def create_visualization_agent():
     """Create and configure the LLM instance specialized for DOT code generation"""
-    return get_llm_instance()
+    return get_llm_instance(max_tokens=12000)  # Higher token limit for complex graph structures
 
 def create_validation_agent():
     """Create and configure the LLM instance specialized for content validation"""
@@ -80,7 +80,7 @@ def get_agent_info():
         "summarization_agent": {
             "purpose": "Content analysis and structured summarization",
             "temperature": 0.1,
-            "max_tokens": 4000,
+            "max_tokens": 8000,
             "optimization": "Consistent, hierarchical output",
             "provider": "Anthropic",
             "model": "claude-3-5-haiku-20241022"
@@ -88,7 +88,7 @@ def get_agent_info():
         "visualization_agent": {
             "purpose": "DOT code generation and graph syntax",
             "temperature": 0.1,
-            "max_tokens": 4000,
+            "max_tokens": 8000,
             "optimization": "Precise syntax, complex structures",
             "provider": "Anthropic", 
             "model": "claude-3-5-haiku-20241022"
