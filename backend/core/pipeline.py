@@ -16,25 +16,127 @@ from .utils import clean_dot_code
 
 load_dotenv()
 
-def get_llm_instance(model_name=None, temperature=0.1, max_tokens=4000):
+def get_model_max_tokens(model_name: str, agent_type: str) -> int:
     """
-    Create LLM instance based on environment configuration
+    Get dynamic max tokens based on model capabilities and agent type
+    
+    Args:
+        model_name (str): The model identifier
+        agent_type (str): Type of agent (validation, summarization, visualization)
+    
+    Returns:
+        int: Optimal max_tokens for the model and agent combination
+    """
+    # Known model context window limits (output token limits)
+    model_limits = {
+        # Anthropic models
+        "claude-opus-4-1-20250805": 32000,       # 32k context window
+        "claude-opus-4-20250514": 32000,         # 32k context window
+        "claude-sonnet-4-20250514": 64000,       # 64k context window
+        "claude-3-7-sonnet-20250219": 64000,     # 64k context window
+        "claude-3-5-haiku-20241022": 8000,       # 8k context window
+        
+        # OpenAI models
+        "gpt-5": 128000,                         # 128k context window
+        "gpt-4.1": 32000,                        # 32k context window
+        "gpt-4o": 128000,                        # 128k context window
+        "gpt-4o-mini": 16000,                    # 16k context window
+        "gpt-4-turbo": 4000,                     # 4k context window
+        
+        # OpenRouter Anthropic models
+        "anthropic/claude-opus-4-1-20250805": 32000,     # 32k context window
+        "anthropic/claude-opus-4-20250514": 32000,       # 32k context window
+        "anthropic/claude-sonnet-4-20250514": 64000,     # 64k context window
+        "anthropic/claude-3-7-sonnet-20250219": 64000,   # 64k context window
+        "anthropic/claude-3-5-haiku-20241022": 8000,     # 8k context window
+        
+        # OpenRouter OpenAI models
+        "openai/gpt-5": 128000,                  # 128k context window
+        "openai/gpt-4.1": 32000,                 # 32k context window
+        "openai/gpt-4o": 128000,                 # 128k context window
+        "openai/gpt-4o-mini": 16000,             # 16k context window
+        "openai/gpt-4-turbo": 4000,              # 4k context window
+        
+        # OpenRouter free models (with real context windows)
+        "deepseek/deepseek-chat-v3-0324:free": 160000,  # DeepSeek R1: 160k
+        "deepseek/deepseek-r1-0528:free": 160000,       # DeepSeek R1: 160k
+        "qwen/qwen3-coder:free": 40000,                 # Qwen 3 4B: 40k
+        "deepseek/deepseek-r1:free": 160000,            # DeepSeek R1: 160k
+        "moonshotai/kimi-k2:free": 32000,               # Kimi 2: 32k
+        "qwen/qwen3-235b-a22b:free": 41000,             # Qwen3 235B A22B: 41k
+        "meta-llama/llama-3.3-70b-instruct:free": 130000, # Llama 3.3: 130k (using 3.2 data)
+        "google/gemma-3n-e4b-it:free": 2000,            # Gemma 3N4B: 2k
+        "mistralai/mistral-small-3.1-24b-instruct:free": 95000, # Mistral Small 3.1: 95k
+        "openai/gpt-oss-20b:free": 130000,              # GPT-OSS-20B: 130k
+        "google/gemma-3n-e2b-it:free": 2000,            # Gemma 3N2B: 2k
+        "meta-llama/llama-3.2-3b-instruct:free": 130000, # Llama 3.2 3B: 130k
+        "qwen/qwen3-4b:free": 40000,                    # Qwen 3 4B: 40k
+        "mistralai/mistral-7b-instruct:free": 95000,    # Using Mistral Small data: 95k
+        "google/gemma-2-9b-it:free": 8000,              # Gemma 2 9B: 8k
+        "google/gemma-3-27b-it:free": 8000,             # Using Gemma 2 data: 8k
+    }
+    
+    # Agent type scaling factors (percentage of max tokens to use)
+    scaling_factors = {
+        "validation": 0.15,      # 15% - short responses for classification
+        "summarization": 0.75,   # 75% - detailed hierarchical summaries
+        "visualization": 0.70    # 70% - complex DOT code structures
+    }
+    
+    # Get base limit for the model
+    if model_name in model_limits:
+        base_limit = model_limits[model_name]
+    else:
+        # Smart fallbacks based on model name patterns
+        model_lower = model_name.lower()
+        if "haiku" in model_lower:
+            base_limit = 8192
+        elif "sonnet" in model_lower:
+            base_limit = 8000
+        elif "opus" in model_lower:
+            base_limit = 8000
+        elif "gpt-4o-mini" in model_lower:
+            base_limit = 16384
+        elif "gpt" in model_lower:
+            base_limit = 4096
+        elif "deepseek" in model_lower or "qwen" in model_lower:
+            base_limit = 8000
+        elif "llama" in model_lower or "gemma" in model_lower:
+            base_limit = 8000
+        elif "mistral" in model_lower:
+            base_limit = 8000
+        else:
+            base_limit = 4000  # Conservative fallback for unknown models
+    
+    # Apply scaling factor for agent type
+    scaled_limit = int(base_limit * scaling_factors.get(agent_type, 0.5))
+    
+    # Ensure minimum viable limits
+    min_limits = {
+        "validation": 500,
+        "summarization": 2000,
+        "visualization": 2000
+    }
+    
+    final_limit = max(scaled_limit, min_limits.get(agent_type, 1000))
+    
+    print(f"🎯 Model: {model_name}, Agent: {agent_type}, Base: {base_limit}, Scaled: {final_limit}")
+    
+    return final_limit
+
+def get_llm_instance(model_name=None, temperature=0.1, max_tokens=4000, agent_type="general"):
+    """
+    Create LLM instance based on environment configuration with dynamic token limits
     Supports multiple providers: Anthropic, OpenAI, OpenRouter
     """
-    provider = os.getenv("PROVIDER", "anthropic").lower()  # Changed from LLM_PROVIDER to PROVIDER
-    model = model_name or os.getenv("MODEL_NAME", "claude-3-5-haiku-20241022")  # Changed from LLM_MODEL to MODEL_NAME
+    provider = os.getenv("PROVIDER", "anthropic").lower()
+    model = model_name or os.getenv("MODEL_NAME", "claude-3-5-haiku-20241022")
     
-    # Adjust max_tokens based on model capabilities
-    if "haiku" in model.lower():
-        max_tokens = min(max_tokens, 8192)  # Claude Haiku limit
-    elif "sonnet" in model.lower():
-        max_tokens = min(max_tokens, 8192)  # Claude Sonnet limit
-    elif "opus" in model.lower():
-        max_tokens = min(max_tokens, 4096)  # Claude Opus limit (conservative)
-    elif "gpt" in model.lower():
-        max_tokens = min(max_tokens, 4096)  # GPT models limit (conservative)
+    # Use dynamic max_tokens based on model capabilities and agent type
+    if agent_type != "general":
+        max_tokens = get_model_max_tokens(model, agent_type)
     
-    print(f"🤖 Creating LLM instance: provider={provider}, model={model}, max_tokens={max_tokens}")
+    print(f"🤖 Creating LLM instance: provider={provider}, model={model}, max_tokens={max_tokens}, agent={agent_type}")
     
     if provider == "anthropic":
         return ChatAnthropic(
@@ -63,15 +165,15 @@ def get_llm_instance(model_name=None, temperature=0.1, max_tokens=4000):
 
 def create_summarization_agent():
     """Create and configure the LLM instance specialized for summarization"""
-    return get_llm_instance(max_tokens=8000)  # Higher token limit for detailed summaries
+    return get_llm_instance(agent_type="summarization")
 
 def create_visualization_agent():
     """Create and configure the LLM instance specialized for DOT code generation"""
-    return get_llm_instance(max_tokens=8000)  # Higher token limit for complex graph structures
+    return get_llm_instance(agent_type="visualization")
 
 def create_validation_agent():
     """Create and configure the LLM instance specialized for content validation"""
-    return get_llm_instance(max_tokens=1500)  # Medium token limit for content validation
+    return get_llm_instance(agent_type="validation")
 
 def get_agent_info():
     """
