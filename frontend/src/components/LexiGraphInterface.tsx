@@ -12,7 +12,9 @@ import ModelSelector from './ModelSelector'
 import TextInput from './TextInput'
 import GraphDisplay from './GraphDisplay'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:8000' 
+  : process.env.NEXT_PUBLIC_API_URL || 'https://your-backend-url.onrender.com'
 
 const EXAMPLE_LECTURE = `Welcome to this short lecture on Artificial Intelligence. Let's start with the basics. Artificial Intelligence, or AI, refers to the capability of machines to perform tasks that typically require human intelligence—things like understanding language, recognizing images, or making decisions. Within AI, one of the most important and widely used branches is Machine Learning, or ML. Machine Learning is all about teaching computers to learn from data. Instead of programming every rule manually, we feed the machine examples, and it learns patterns or rules from that data on its own.
 

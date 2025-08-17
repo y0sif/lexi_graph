@@ -79,7 +79,7 @@ def process_lecture(text: str, provider: str, model: str, api_key: str):
             print(f"📝 Generated filename: {filename}")
             
             # Ensure output directory exists
-            output_dir = Path("../output")
+            output_dir = Path("output")
             output_dir.mkdir(exist_ok=True)
             print(f"📁 Output directory: {output_dir.absolute()}")
             
@@ -149,7 +149,12 @@ app = FastAPI(
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://*.vercel.app",   # Vercel deployments
+        "https://*.vercel.com",   # Vercel custom domains
+        "*"  # Allow all origins for now (you can restrict this later)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -277,7 +282,7 @@ async def serve_image(filename: str):
     """Serve image file for display in the frontend"""
     try:
         # Look for the file in the output directory
-        output_dir = Path("../output")
+        output_dir = Path("output")
         file_path = output_dir / filename
         
         print(f"Looking for image file: {file_path}")
@@ -306,7 +311,7 @@ async def download_graph(filename: str):
     """Download generated graph file"""
     try:
         # Look for the file in the output directory
-        output_dir = Path("../output")
+        output_dir = Path("output")
         file_path = output_dir / filename
         
         if not file_path.exists():
@@ -324,4 +329,5 @@ async def download_graph(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
