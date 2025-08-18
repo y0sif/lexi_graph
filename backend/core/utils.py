@@ -5,9 +5,10 @@ Utility functions for graph generation and file management
 import os
 import time
 import shutil
-import graphviz
+import requests
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 def clean_dot_code(raw_output: str) -> str:
     """
@@ -68,31 +69,53 @@ def clean_dot_code(raw_output: str) -> str:
 
 def validate_dot_syntax(dot_code: str) -> tuple[bool, str]:
     """
-    Validate DOT syntax by attempting to parse it with graphviz
+    Validate DOT syntax using QuickChart API
     
     Args:
         dot_code (str): DOT code to validate
     
     Returns:
-        tuple: (is_valid, error_message)
+        tuple[bool, str]: (is_valid, error_message)
     """
     try:
-        # Try to create a graphviz Source object
-        source = graphviz.Source(dot_code)
-        # Try to render to check for additional syntax errors
-        source.pipe(format='png', quiet=True)
-        return True, ""
+        print("🔍 Validating DOT syntax using QuickChart API...")
+        
+        if not dot_code or not dot_code.strip():
+            return False, "DOT code is empty"
+        
+        # Basic syntax checks
+        dot_code_lower = dot_code.lower().strip()
+        
+        # Check if it starts with digraph or graph
+        if not (dot_code_lower.startswith('digraph') or dot_code_lower.startswith('graph')):
+            return False, "DOT code must start with 'digraph' or 'graph'"
+        
+        # Check for balanced braces
+        open_braces = dot_code.count('{')
+        close_braces = dot_code.count('}')
+        if open_braces != close_braces:
+            return False, f"Unbalanced braces: {open_braces} opening, {close_braces} closing"
+        
+        # Try to validate with QuickChart API (just test the request)
+        encoded_dot = quote(dot_code)
+        test_url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
+        
+        # Make a HEAD request to check if the API would accept it
+        response = requests.head(test_url, timeout=10)
+        if response.status_code == 200:
+            print("✅ DOT syntax validation passed")
+            return True, "Valid DOT syntax"
+        else:
+            return False, f"QuickChart API validation failed with status {response.status_code}"
+            
     except Exception as e:
         error_details = f"DOT syntax validation failed: {str(e)}"
         print(f"❌ {error_details}")
-        print(f"📝 DOT code being validated:\n{'-'*50}")
-        print(dot_code)
-        print(f"{'-'*50}")
         return False, error_details
 
 def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "output"):
     """
-    Compile DOT code into a PNG image file with detailed error reporting
+    Compile DOT code into a PNG image file using QuickChart API
     
     Args:
         dot_code (str): The DOT language code
@@ -103,7 +126,7 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         str: Path to the generated PNG file or None on failure
     """
     try:
-        print(f"🔧 Starting DOT compilation for file: {output_filename}")
+        print(f"🔧 Starting DOT compilation using QuickChart API for file: {output_filename}")
         print(f"📁 Output directory: {output_dir}")
         
         # Clean the DOT code first
@@ -141,25 +164,29 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         print(f"📂 Ensuring output directory exists: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
         
-        # Generate the graph
-        print("🎨 Generating PNG from DOT code...")
-        graph = graphviz.Source(cleaned_dot, format='png')
+        # Generate the graph using QuickChart API
+        print("🎨 Generating PNG from DOT code using QuickChart API...")
         
-        # Get the absolute path for debugging
-        abs_output_dir = os.path.abspath(output_dir)
-        print(f"📍 Absolute output directory: {abs_output_dir}")
+        # URL encode the DOT code
+        encoded_dot = quote(cleaned_dot)
+        api_url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
         
-        # Render the graph
-        temp_path = graph.render(filename=output_filename, cleanup=True)
-        print(f"🔨 Rendered to temporary file: {temp_path}")
+        print(f"🌐 Making request to QuickChart API...")
+        print(f"📏 Encoded DOT length: {len(encoded_dot)} characters")
         
-        # Move to output directory
-        final_path = os.path.join(output_dir, f"{output_filename}.png")
-        print(f"📋 Moving to final destination: {final_path}")
+        # Make the API request
+        response = requests.get(api_url, timeout=30)
         
-        if os.path.exists(temp_path):
-            shutil.move(temp_path, final_path)
-            print(f"✅ Graph successfully saved as {final_path}")
+        if response.status_code == 200:
+            print("✅ Successfully received image from QuickChart API")
+            
+            # Save the image
+            final_path = os.path.join(output_dir, f"{output_filename}.png")
+            
+            with open(final_path, 'wb') as f:
+                f.write(response.content)
+            
+            print(f"💾 Graph successfully saved as {final_path}")
             
             # Verify the file was created and get its size
             if os.path.exists(final_path):
@@ -170,7 +197,10 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
                 print(f"❌ Final file not found at {final_path}")
                 return None
         else:
-            print(f"❌ Temporary file not found at {temp_path}")
+            error_msg = f"❌ QuickChart API request failed with status {response.status_code}"
+            print(error_msg)
+            if response.text:
+                print(f"📝 API response: {response.text}")
             return None
         
     except Exception as e:
@@ -185,12 +215,6 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         print(f"🔍 Full error traceback:")
         traceback.print_exc()
         
-        return None
-        return final_path
-        
-    except Exception as e:
-        print(f"Error generating graph: {e}")
-        print(f"Original DOT code:\n{dot_code}")
         return None
 
 def generate_unique_filename():
