@@ -172,42 +172,15 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         encoded_dot = quote(cleaned_dot)
         api_url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
         
-        print(f"🌐 Making request to QuickChart API...")
+        print(f"🌐 Generated QuickChart URL")
         print(f"📏 Encoded DOT length: {len(encoded_dot)} characters")
+        print(f"🔗 Direct URL: {api_url}")
         
-        # Make the API request
-        response = requests.get(api_url, timeout=30)
+        # Return the direct URL instead of making the API call
+        # This is much more efficient and follows best practices
+        print("✅ Returning direct QuickChart URL for frontend to use")
         
-        if response.status_code == 200:
-            print("✅ Successfully received image from QuickChart API")
-            
-            # Convert to base64 for direct embedding
-            image_data = response.content
-            base64_image = base64.b64encode(image_data).decode('utf-8')
-            
-            # Also save the file for download purposes
-            final_path = os.path.join(output_dir, f"{output_filename}.png")
-            
-            with open(final_path, 'wb') as f:
-                f.write(image_data)
-            
-            print(f"💾 Graph successfully saved as {final_path}")
-            
-            # Verify the file was created and get its size
-            if os.path.exists(final_path):
-                file_size = os.path.getsize(final_path)
-                print(f"📊 Final file size: {file_size} bytes")
-                print(f"📊 Base64 data size: {len(base64_image)} characters")
-                return final_path, base64_image
-            else:
-                print(f"❌ Final file not found at {final_path}")
-                return None, base64_image  # Still return base64 data even if file save failed
-        else:
-            error_msg = f"❌ QuickChart API request failed with status {response.status_code}"
-            print(error_msg)
-            if response.text:
-                print(f"📝 API response: {response.text}")
-            return None, None
+        return None, api_url  # Return URL as the "image data"
         
     except Exception as e:
         error_msg = f"❌ DOT compilation failed: {str(e)}"

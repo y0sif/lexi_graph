@@ -53,30 +53,56 @@ export default function GraphDisplay({ graphPath, summary, graphData }: GraphDis
     )
   }
 
-  // Use base64 data if available, otherwise fall back to API endpoint
-  const imageUrl = graphData 
-    ? `data:image/png;base64,${graphData}`
-    : `${API_BASE_URL}/image/${graphPath}`
+  // Check if graphData is a direct URL (starts with http) or base64 data
+  const isDirectUrl = graphData && graphData.startsWith('http')
+  
+  const imageUrl = isDirectUrl 
+    ? graphData  // Use direct QuickChart URL
+    : graphData 
+      ? `data:image/png;base64,${graphData}`  // Use base64 data
+      : `${API_BASE_URL}/image/${graphPath}`  // Fallback to API endpoint
+      
   const downloadUrl = `${API_BASE_URL}/download/${graphPath}`
 
   const handleDownload = async () => {
     try {
       setDownloadError('')
-      const response = await fetch(downloadUrl)
       
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.statusText}`)
+      // If we have a direct URL, download from there
+      if (isDirectUrl && graphData) {
+        const response = await fetch(graphData)
+        
+        if (!response.ok) {
+          throw new Error(`Download failed: ${response.statusText}`)
+        }
+        
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${graphPath}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else {
+        // Fallback to backend download endpoint
+        const response = await fetch(downloadUrl)
+        
+        if (!response.ok) {
+          throw new Error(`Download failed: ${response.statusText}`)
+        }
+        
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = graphPath
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
       }
-      
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = graphPath
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Download error:', error)
       setDownloadError(error instanceof Error ? error.message : 'Download failed')
