@@ -66,7 +66,205 @@ def clean_dot_code(raw_output: str) -> str:
         if digraph_match:
             cleaned = digraph_match.group(1)
     
+    # Pattern 6: Fix color attributes for filled nodes
+    # When style=filled is used, color should be fillcolor for background
+    cleaned = fix_color_attributes(cleaned)
+    
+    # Pattern 7: Replace unsupported colors with basic supported colors
+    cleaned = fix_unsupported_colors(cleaned)
+    
     return cleaned.strip()
+
+def fix_color_attributes(dot_code: str) -> str:
+    """
+    Fix color attributes in DOT code for better rendering with style=filled
+    
+    Args:
+        dot_code (str): DOT code that may have incorrect color attributes
+    
+    Returns:
+        str: DOT code with fixed color attributes
+    """
+    if not dot_code:
+        return dot_code
+    
+    # Check if the graph uses style=filled globally or on nodes
+    has_filled_style = 'style=filled' in dot_code or 'style="filled"' in dot_code
+    
+    if has_filled_style:
+        print("🎨 Fixing color attributes for filled nodes...")
+        
+        # Replace color=lightXXX with fillcolor=lightXXX in node definitions
+        # Pattern matches: NodeName [attributes with color=lightcolor, other_attrs];
+        color_pattern = r'(\w+\s*\[(?:[^,\]]*,\s*)*)(color=light\w+)((?:\s*,\s*[^,\]]*)*\])'
+        
+        def replace_color(match):
+            prefix = match.group(1)  # NodeName [other_attrs,
+            color_attr = match.group(2)  # color=lightblue
+            suffix = match.group(3)  # , other_attrs]
+            
+            # Replace color= with fillcolor=
+            fillcolor_attr = color_attr.replace('color=', 'fillcolor=')
+            
+            print(f"  🔧 Fixing: {color_attr} → {fillcolor_attr}")
+            return prefix + fillcolor_attr + suffix
+        
+        cleaned = re.sub(color_pattern, replace_color, dot_code)
+        
+        # Also handle quoted color values: color="lightblue"
+        quoted_color_pattern = r'(\w+\s*\[(?:[^,\]]*,\s*)*)(color="light\w+")((?:\s*,\s*[^,\]]*)*\])'
+        
+        def replace_quoted_color(match):
+            prefix = match.group(1)
+            color_attr = match.group(2)  # color="lightblue"
+            suffix = match.group(3)
+            
+            fillcolor_attr = color_attr.replace('color=', 'fillcolor=')
+            print(f"  🔧 Fixing: {color_attr} → {fillcolor_attr}")
+            return prefix + fillcolor_attr + suffix
+        
+        cleaned = re.sub(quoted_color_pattern, replace_quoted_color, cleaned)
+        
+        # Add explicit fontcolor=black for all nodes to ensure text visibility
+        # This prevents text from being invisible when fillcolor is applied
+        print("🎨 Adding explicit fontcolor=black for text visibility...")
+        
+        # Pattern to find node definitions and add fontcolor if missing
+        node_pattern = r'(\w+\s*\[)([^\]]+)(\])'
+        
+        def ensure_fontcolor(match):
+            prefix = match.group(1)  # NodeName [
+            attributes = match.group(2)  # all attributes
+            suffix = match.group(3)  # ]
+            
+            # Check if fontcolor is already specified
+            if 'fontcolor=' not in attributes:
+                # Add fontcolor=black to ensure text is visible
+                if attributes.strip().endswith(','):
+                    new_attributes = attributes + ' fontcolor=black'
+                else:
+                    new_attributes = attributes + ', fontcolor=black'
+                print(f"  ✏️ Adding fontcolor=black to node")
+                return prefix + new_attributes + suffix
+            
+            return prefix + attributes + suffix
+        
+        cleaned = re.sub(node_pattern, ensure_fontcolor, cleaned)
+        
+        return cleaned
+    
+    return dot_code
+
+def fix_unsupported_colors(dot_code: str) -> str:
+    """
+    Replace unsupported colors with basic colors that work with QuickChart
+    Also ensures proper text contrast by using appropriate font colors
+    
+    Args:
+        dot_code (str): DOT code that may contain unsupported colors
+    
+    Returns:
+        str: DOT code with supported colors and proper text contrast
+    """
+    if not dot_code:
+        return dot_code
+    
+    print("🎨 Converting unsupported colors to basic supported colors with proper text contrast...")
+    
+    # Mapping of unsupported colors to lighter, more readable alternatives
+    color_mapping = {
+        'lightgray': 'white',       # Use white instead of gray for better readability
+        'lightgrey': 'white', 
+        'lightblue': 'cyan',        # Use cyan instead of blue for better readability
+        'lightgreen': 'yellow',     # Use yellow instead of green for better readability  
+        'lightcyan': 'cyan',
+        'lightpink': 'pink',
+        'lightyellow': 'yellow',
+        'lightsalmon': 'orange',
+        'lightcoral': 'pink',
+        'lightsteelblue': 'cyan',
+        'lightseagreen': 'yellow',
+        'lightslategray': 'white',
+        'lightslategrey': 'white',
+    }
+    
+    # Colors that need white text for good contrast
+    dark_colors = {'blue', 'purple', 'red', 'green'}
+    # Colors that work well with black text
+    light_colors = {'white', 'yellow', 'cyan', 'pink', 'orange', 'gray'}
+    
+    # Replace both fillcolor and color attributes
+    for unsupported, supported in color_mapping.items():
+        # Replace fillcolor=lightcolor
+        pattern1 = rf'fillcolor={unsupported}\b'
+        replacement1 = f'fillcolor={supported}'
+        if re.search(pattern1, dot_code):
+            print(f"  🔧 Replacing: fillcolor={unsupported} → fillcolor={supported}")
+            dot_code = re.sub(pattern1, replacement1, dot_code)
+        
+        # Replace fillcolor="lightcolor"
+        pattern2 = rf'fillcolor="{unsupported}"\b'
+        replacement2 = f'fillcolor="{supported}"'
+        if re.search(pattern2, dot_code):
+            print(f"  🔧 Replacing: fillcolor=\"{unsupported}\" → fillcolor=\"{supported}\"")
+            dot_code = re.sub(pattern2, replacement2, dot_code)
+        
+        # Replace color=lightcolor (in case some still exist)
+        pattern3 = rf'color={unsupported}\b'
+        replacement3 = f'color={supported}'
+        if re.search(pattern3, dot_code):
+            print(f"  🔧 Replacing: color={unsupported} → color={supported}")
+            dot_code = re.sub(pattern3, replacement3, dot_code)
+        
+        # Replace color="lightcolor"
+        pattern4 = rf'color="{unsupported}"\b'
+        replacement4 = f'color="{supported}"'
+        if re.search(pattern4, dot_code):
+            print(f"  🔧 Replacing: color=\"{unsupported}\" → color=\"{supported}\"")
+            dot_code = re.sub(pattern4, replacement4, dot_code)
+    
+    # Now fix font colors based on background colors for better contrast
+    print("🎨 Optimizing text contrast based on background colors...")
+    
+    # Pattern to find nodes with fillcolor and adjust fontcolor accordingly
+    node_pattern = r'(\w+\s*\[)([^\]]+)(\])'
+    
+    def optimize_text_contrast(match):
+        prefix = match.group(1)  # NodeName [
+        attributes = match.group(2)  # all attributes
+        suffix = match.group(3)  # ]
+        
+        # Extract fillcolor if present
+        fillcolor_match = re.search(r'fillcolor=(["\']?)(\w+)\1', attributes)
+        if fillcolor_match:
+            color = fillcolor_match.group(2).lower()
+            
+            # Determine optimal font color based on background
+            if color in dark_colors:
+                optimal_fontcolor = 'white'
+            else:
+                optimal_fontcolor = 'black'
+            
+            # Update or add fontcolor
+            if re.search(r'fontcolor=', attributes):
+                # Replace existing fontcolor
+                new_attributes = re.sub(r'fontcolor=(["\']?)\w+\1', f'fontcolor={optimal_fontcolor}', attributes)
+                print(f"  ✏️ Updated fontcolor to {optimal_fontcolor} for {color} background")
+            else:
+                # Add fontcolor
+                if attributes.strip().endswith(','):
+                    new_attributes = attributes + f' fontcolor={optimal_fontcolor}'
+                else:
+                    new_attributes = attributes + f', fontcolor={optimal_fontcolor}'
+                print(f"  ✏️ Added fontcolor={optimal_fontcolor} for {color} background")
+            
+            return prefix + new_attributes + suffix
+        
+        return prefix + attributes + suffix
+    
+    dot_code = re.sub(node_pattern, optimize_text_contrast, dot_code)
+    
+    return dot_code
 
 def validate_dot_syntax(dot_code: str) -> tuple[bool, str]:
     """

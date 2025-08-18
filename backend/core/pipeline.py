@@ -325,11 +325,19 @@ Set the graph direction to left-to-right using rankdir=LR.
 
 Nodes and Color Grouping
 Each item from the hierarchy should be represented as a separate node. Use shape=box and style=filled for clarity.
+CRITICAL COLOR GUIDELINES:
+- Use fillcolor (NEVER color) for background colors when style=filled is used
+- Always specify explicit fontcolor for text visibility
+- ONLY use light colors for good text readability: white, yellow, cyan, pink, orange
+- AVOID dark colors like blue, green, red, purple as they make text hard to read
+- For text color: use fontcolor=black for light backgrounds, fontcolor=white for dark backgrounds
+- Never use black for the background of a node
+
 
 Node naming convention:
 - Use simple identifiers like: AI, ML, SupervisedLearning, etc.
 - Put the actual text in the label attribute (in the same language as the summary)
-- Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", color=lightblue];
+- Example: SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", fillcolor=yellow, fontcolor=black];
 
 Edges
 Connect nodes based on their parent-child relationships using simple node identifiers.
@@ -339,16 +347,16 @@ digraph TopicSummary {{
     rankdir=LR;
     node [shape=box, style=filled];
 
-    // Root node
-    AI [label="Artificial Intelligence", color=lightgray];
+    // Root node - use light colors for good text contrast
+    AI [label="Artificial Intelligence", fillcolor=white, fontcolor=black];
     
-    // Children of AI (same color group)
-    ML [label="Machine Learning", color=lightblue];
-    NLP [label="Natural Language Processing", color=lightblue];
+    // Children of AI (same color group) - use light colors
+    ML [label="Machine Learning", fillcolor=yellow, fontcolor=black];
+    NLP [label="Natural Language Processing", fillcolor=yellow, fontcolor=black];
     
-    // Children of ML (same color group)
-    SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", color=lightgreen];
-    UnsupervisedLearning [label="Unsupervised Learning\\nFinds patterns in data", color=lightgreen];
+    // Children of ML (same color group) - use different light colors for grouping
+    SupervisedLearning [label="Supervised Learning\\nTrains on labeled data", fillcolor=cyan, fontcolor=black];
+    UnsupervisedLearning [label="Unsupervised Learning\\nFinds patterns in data", fillcolor=cyan, fontcolor=black];
     
     // Edges
     AI -> ML;
