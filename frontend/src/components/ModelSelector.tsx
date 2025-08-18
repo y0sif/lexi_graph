@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { ChevronDown } from 'lucide-react'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:8000' 
+  : process.env.NEXT_PUBLIC_API_URL || 'https://your-backend-url.onrender.com'
 
 interface Model {
   id: string
@@ -23,6 +25,8 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  console.log('ModelSelector rendered with provider:', provider, 'value:', value)
+
   useEffect(() => {
     const fetchModels = async () => {
       if (!provider) {
@@ -32,11 +36,14 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
 
       setLoading(true)
       try {
+        console.log(`Fetching models for provider: ${provider}`)
+        console.log(`API URL: ${API_BASE_URL}/models/${provider}`)
         const response = await axios.get(`${API_BASE_URL}/models/${provider}`)
-        setModels(response.data.models)
+        console.log('Models response:', response.data)
+        setModels(response.data.models || [])
         
         // Auto-select first model if current value is not valid
-        if (response.data.models.length > 0 && !response.data.models.find((m: Model) => m.id === value)) {
+        if (response.data.models && response.data.models.length > 0 && !response.data.models.find((m: Model) => m.id === value)) {
           onChange(response.data.models[0].id)
         }
       } catch (error) {
