@@ -25,8 +25,6 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  console.log('ModelSelector rendered with provider:', provider, 'value:', value)
-
   useEffect(() => {
     const fetchModels = async () => {
       if (!provider) {
@@ -36,10 +34,7 @@ export default function ModelSelector({ provider, value, onChange, error }: Mode
 
       setLoading(true)
       try {
-        console.log(`Fetching models for provider: ${provider}`)
-        console.log(`API URL: ${API_BASE_URL}/models/${provider}`)
         const response = await axios.get(`${API_BASE_URL}/models/${provider}`)
-        console.log('Models response:', response.data)
         setModels(response.data.models || [])
         
         // Auto-select first model if current value is not valid

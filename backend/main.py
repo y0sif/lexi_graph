@@ -151,9 +151,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.vercel.app",   # Vercel deployments
-        "https://*.vercel.com",   # Vercel custom domains
-        "https://your-vercel-app.vercel.app",  # Replace with your actual Vercel URL
+        "http://127.0.0.1:3000",  # Local development alt
+        "*"  # Allow all origins for now - you can restrict this later
     ],
     allow_credentials=True,
     allow_methods=["*"],
