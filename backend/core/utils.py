@@ -7,6 +7,7 @@ import time
 import shutil
 import requests
 import re
+import base64
 from pathlib import Path
 from urllib.parse import quote
 
@@ -123,7 +124,7 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         output_dir (str): Directory to save the output file
     
     Returns:
-        str: Path to the generated PNG file or None on failure
+        tuple: (file_path, base64_image_data) or (None, None) on failure
     """
     try:
         print(f"🔧 Starting DOT compilation using QuickChart API for file: {output_filename}")
@@ -144,7 +145,7 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
             print(f"📝 Original DOT code:\n{'-'*50}")
             print(dot_code)
             print(f"{'-'*50}")
-            return None
+            return None, None
         
         # Show the cleaned DOT code for debugging
         print(f"📝 Cleaned DOT code:\n{'-'*50}")
@@ -156,7 +157,7 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         is_valid, error_msg = validate_dot_syntax(cleaned_dot)
         if not is_valid:
             print(f"❌ Validation failed: {error_msg}")
-            return None
+            return None, None
         
         print("✅ DOT syntax validation passed")
         
@@ -180,11 +181,15 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         if response.status_code == 200:
             print("✅ Successfully received image from QuickChart API")
             
-            # Save the image
+            # Convert to base64 for direct embedding
+            image_data = response.content
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+            
+            # Also save the file for download purposes
             final_path = os.path.join(output_dir, f"{output_filename}.png")
             
             with open(final_path, 'wb') as f:
-                f.write(response.content)
+                f.write(image_data)
             
             print(f"💾 Graph successfully saved as {final_path}")
             
@@ -192,16 +197,17 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
             if os.path.exists(final_path):
                 file_size = os.path.getsize(final_path)
                 print(f"📊 Final file size: {file_size} bytes")
-                return final_path
+                print(f"📊 Base64 data size: {len(base64_image)} characters")
+                return final_path, base64_image
             else:
                 print(f"❌ Final file not found at {final_path}")
-                return None
+                return None, base64_image  # Still return base64 data even if file save failed
         else:
             error_msg = f"❌ QuickChart API request failed with status {response.status_code}"
             print(error_msg)
             if response.text:
                 print(f"📝 API response: {response.text}")
-            return None
+            return None, None
         
     except Exception as e:
         error_msg = f"❌ DOT compilation failed: {str(e)}"
@@ -215,7 +221,7 @@ def compile_dot_to_png(dot_code: str, output_filename: str, output_dir: str = "o
         print(f"🔍 Full error traceback:")
         traceback.print_exc()
         
-        return None
+        return None, None
 
 def generate_unique_filename():
     """Generate a unique filename based on timestamp"""

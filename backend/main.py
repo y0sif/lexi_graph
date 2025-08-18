@@ -84,15 +84,16 @@ def process_lecture(text: str, provider: str, model: str, api_key: str):
             print(f"📁 Output directory: {output_dir.absolute()}")
             
             print("🔧 Starting DOT to PNG compilation...")
-            result_path = compile_dot_to_png(dot_code, filename, str(output_dir))
+            result_path, base64_data = compile_dot_to_png(dot_code, filename, str(output_dir))
             
-            if result_path:
+            if result_path or base64_data:
                 graph_path = f"{filename}.png"
                 print(f"✅ Graph generation successful: {graph_path}")
                 return {
                     "success": True,
                     "graph_path": graph_path,
-                    "summary": summary
+                    "summary": summary,
+                    "graph_data": base64_data
                 }
             else:
                 error_msg = "Failed to generate the graph image. The AI model may have produced invalid graph code. Please try again with different content or a different model."
@@ -171,6 +172,7 @@ class ProcessResponse(BaseModel):
     graph_path: Optional[str] = None
     summary: Optional[str] = None
     error: Optional[str] = None
+    graph_data: Optional[str] = None  # base64 encoded image data
 
 @app.get("/")
 async def root():
@@ -264,7 +266,8 @@ async def process_text(input_data: TextInput):
                 success=True,
                 message="Graph generated successfully",
                 graph_path=result.get("graph_path"),
-                summary=result.get("summary")
+                summary=result.get("summary"),
+                graph_data=result.get("graph_data")
             )
         else:
             return ProcessResponse(

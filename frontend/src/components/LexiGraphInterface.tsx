@@ -41,6 +41,7 @@ interface ProcessResponse {
   graph_path?: string
   summary?: string
   error?: string
+  graph_data?: string  // base64 encoded image data
 }
 
 export default function LexiGraphInterface() {
@@ -227,6 +228,7 @@ export default function LexiGraphInterface() {
               <GraphDisplay 
                 graphPath={result.graph_path} 
                 summary={result.summary}
+                graphData={result.graph_data}
               />
             ) : (
               <div className="bg-red-50 border border-red-200 rounded-xl p-6">

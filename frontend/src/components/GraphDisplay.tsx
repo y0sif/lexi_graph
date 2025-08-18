@@ -11,9 +11,10 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
 interface GraphDisplayProps {
   graphPath?: string
   summary?: string
+  graphData?: string  // base64 encoded image data
 }
 
-export default function GraphDisplay({ graphPath, summary }: GraphDisplayProps) {
+export default function GraphDisplay({ graphPath, summary, graphData }: GraphDisplayProps) {
   const [imageError, setImageError] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
@@ -52,8 +53,10 @@ export default function GraphDisplay({ graphPath, summary }: GraphDisplayProps) 
     )
   }
 
-  // Separate URLs for image display and download
-  const imageUrl = `${API_BASE_URL}/image/${graphPath}`
+  // Use base64 data if available, otherwise fall back to API endpoint
+  const imageUrl = graphData 
+    ? `data:image/png;base64,${graphData}`
+    : `${API_BASE_URL}/image/${graphPath}`
   const downloadUrl = `${API_BASE_URL}/download/${graphPath}`
 
   const handleDownload = async () => {
